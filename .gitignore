@@ -1,0 +1,44 @@
+# Original cloud export (kept locally; contains credentials and runtime data)
+qwenpaw-platform-export.zip
+*.tar.gz
+
+# Local credentials and user-specific workspace state
+configs/credentials.yaml
+configs/PROFILE.md
+configs/MEMORY.md
+configs/chats.json
+configs/jobs.json
+
+# AgentScope/QwenPaw runtime data
+checkpoints/
+mem_agent/
+mem_metadata/
+mem_session/
+memory/*
+!memory/.gitkeep
+sessions/*
+!sessions/.gitkeep
+
+# Local databases, generated media, and logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+media/
+tmp/
+
+# Local environment and tool caches
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+node_modules/
+
+# IDE and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
