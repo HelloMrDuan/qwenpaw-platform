@@ -1,0 +1,37 @@
+schema_version: qwenpaw-extension-skill.v1
+id: pdf-editor
+name: PDF Editor
+version: 1.2.0
+description: Deterministic PDF editing with semantic, visual, geometry, and glyph validation.
+type: skill
+compatibility:
+  qwenpaw_discovery: SKILL.md
+  legacy_cli: scripts/pdf_editor.py
+  contract_entrypoint: executor.main:execute
+contracts:
+  request: schemas/request.schema.json
+  result: schemas/result.schema.json
+runtime:
+  python: ">=3.11,<3.13"
+  dependencies:
+    - pymupdf==1.28.2
+    - pillow==12.3.0
+capabilities:
+  - replace_text
+  - delete_text
+  - delete_pages
+  - insert_pages
+  - reorder_pages
+  - rotate_pages
+  - merge
+  - split
+  - extract
+  - add_text
+  - add_image
+  - replace_image
+  - watermark
+  - page_numbers
+security:
+  overwrite_source: false
+  artifact_uri_scheme: artifact
+  raw_local_paths_in_contract: false

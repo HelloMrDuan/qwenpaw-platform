@@ -3,7 +3,7 @@ name: pdf-editor
 description: "Production deterministic PDF editing skill. Use for actual PDF modification: replace/delete text, page operations, add/replace images, add text/watermark/page numbers, merge/split/extract. Keeps V2 character-level placement and adds PDF classification, scoped occurrence editing, visual validation and streamable progress events."
 ---
 
-# PDF Editor - Production V1
+# PDF Editor - Production V1.2
 
 Use this skill when the user wants to **modify a PDF and receive a new PDF**.
 
@@ -14,7 +14,7 @@ Use this skill when the user wants to **modify a PDF and receive a new PDF**.
 3. All PDF modifications MUST use `scripts/pdf_editor.py`. Do not write ad-hoc PyMuPDF / fitz / ReportLab fallbacks after an error.
 4. Preserve the V2 text replacement engine. Do not replace it with line redraw logic.
 5. For text replacement, default `font_policy` is `auto`; use `exact` only when the user explicitly requires exact font family preservation.
-6. Only claim text-edit success when the final result contains `ok: true`, `validation.semantic_ok: true`, and (when visual validation was performed) `validation.visual_ok: true`.
+6. Only claim success when `operation_execution_ok`, `reopen_ok`, `semantic_ok`, `visual_ok`, and applicable `geometry_layout_ok` are all true.
 7. If visual validation fails, do not return the generated PDF as a successful result.
 8. Never silently switch fonts and call it exact preservation. Report `font_kind` / `font_source` when relevant.
 9. Keep destructive actions transactional and on a new output file.
@@ -70,6 +70,8 @@ PDF_EDITOR_PROGRESS=1 python scripts/pdf_editor.py apply \
 
 Progress JSONL is written to stderr so the final stdout JSON remains intact.
 
+Standard event names are `tool.start`, `tool.progress`, `file.created`, `tool.result`, and `tool.error`.
+
 ### 4. Return only validated outputs
 
 Return the new PDF, never the original.
@@ -96,6 +98,18 @@ Separate deterministic commands:
 
 Page numbers are 1-based.
 
+`insert_pages`, `replace_image`, and `page_numbers` have mandatory operation-specific structural, geometry, and glyph validation in V1.2. A successful process exit is not sufficient.
+
+## Standard Extension Contract
+
+The existing QwenPaw discovery and CLI paths remain unchanged. For platform Extension Contract callers, use:
+
+```text
+executor.main:execute
+```
+
+The adapter accepts `core.contracts.SkillRequest`, resolves controlled input Artifacts, invokes `scripts/pdf_editor.py`, and returns `core.contracts.SkillResult` with validated output Artifacts and StreamEvents. It never duplicates PDF mutation logic.
+
 ## Text replacement behavior
 
 For equal-length replacements, the engine:
@@ -118,6 +132,8 @@ Private exact fonts may be supplied in:
 ```text
 /app/working/font-registry
 ```
+
+or `resources/fonts/` in a private deployment. System CJK fonts are discovered on supported hosts.
 
 or via:
 

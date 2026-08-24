@@ -6,16 +6,16 @@ Events are JSONL on stderr.
 
 - `tool.start`
 - `tool.progress`
-- `file.ready`
+- `file.created`
 - `tool.result`
-- `message.error`
+- `tool.error`
 
 Recommended mapping into the global QwenPaw SSE event bus:
 
 - `tool.start` -> `tool.start`
 - `tool.progress` -> `tool.progress`
-- `file.ready` -> `file.ready`
+- `file.created` -> `file.created`
 - `tool.result` -> `tool.result`
-- `message.error` -> `message.error`
+- `tool.error` -> `tool.error`
 
-The final command result remains one JSON object on stdout.
+The final command result remains one JSON object on stdout. `executor/main.py` converts these engine events into full `core.contracts.StreamEvent` envelopes; the engine does not implement Runtime SSE.

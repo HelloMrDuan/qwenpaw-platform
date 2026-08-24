@@ -2,14 +2,16 @@
 from __future__ import annotations
 import json, subprocess, sys, tempfile
 from pathlib import Path
-import fitz
+import pymupdf as fitz
 
 ROOT = Path(__file__).resolve().parents[1]
 EDITOR = ROOT / 'scripts' / 'pdf_editor.py'
 
 
 def run(*args, expect_ok=True, env=None):
-    p = subprocess.run([sys.executable, str(EDITOR), *map(str,args)], capture_output=True, text=True, env=env)
+    runtime_env = {**__import__('os').environ, 'PYTHONUTF8': '1', **(env or {})}
+    p = subprocess.run([sys.executable, str(EDITOR), *map(str,args)], capture_output=True, text=True,
+                       encoding='utf-8', errors='strict', env=runtime_env)
     try:
         data = json.loads(p.stdout)
     except Exception as exc:
@@ -26,12 +28,20 @@ def save_plan(path: Path, ops):
 
 
 def make_sample(path: Path):
+    font_path = next((p for p in [
+        Path('C:/Windows/Fonts/simhei.ttf'),
+        Path('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'),
+    ] if p.is_file()), None)
+    if font_path is None:
+        raise RuntimeError('A complete CJK font is required for regression fixtures')
+    font = fitz.Font(fontfile=str(font_path))
     d = fitz.open()
     p = d.new_page(width=595, height=842)
-    p.insert_text((72,100), '客户地址：乌审旗刘总', fontsize=14, fontname='china-s')
+    writer = fitz.TextWriter(p.rect); writer.append((72,100), '客户地址：乌审旗刘总', fontsize=14, font=font); writer.write_text(p)
     p.insert_text((72,140), 'Order ABC-123', fontsize=12, fontname='helv')
     p2 = d.new_page(width=595, height=842)
-    p2.insert_text((72,100), '第二页 乌审旗 测试 乌审旗', fontsize=14, fontname='china-s')
+    writer = fitz.TextWriter(p2.rect); writer.append((72,100), '第二页 乌审旗 测试 乌审旗', fontsize=14, font=font); writer.write_text(p2)
+    d.subset_fonts()
     d.save(path); d.close()
 
 
@@ -59,7 +69,7 @@ def main():
         assert r['validation']['semantic_ok'] and r['validation']['visual_ok']
         assert r['validation']['visual']['glyph_validation']
         assert all(p['non_target_diff'] <= 0.003 for p in r['validation']['visual']['pages'])
-        assert 'tool.progress' in events and 'file.ready' in events
+        assert 'tool.progress' in events and 'file.created' in events
         results.append(('v2_equal_length_text_replace_preserved','PASS'))
         results.append(('post_save_visual_regression','PASS'))
         results.append(('jsonl_progress_events','PASS'))

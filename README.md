@@ -19,7 +19,7 @@ qwenpaw-platform-export/
 │   ├── wecom/                      # 企业微信配置
 │   └── wechat-customer/            # 微信客服配置
 ├── skills/                         # 已安装 Skills
-│   ├── pdf-editor/                 # PDF 编辑器 (Production V1.1)
+│   ├── pdf-editor/                 # PDF 编辑器 (Production V1.2 + Extension Contract)
 │   ├── browser/                    # 浏览器自动化
 │   ├── channel_message/            # 消息发送
 │   ├── chat_with_agent/            # Agent 对话

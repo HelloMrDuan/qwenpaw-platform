@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qwenpaw.local/schemas/pdf-editor/result.v1.json",
+  "title": "PDF Editor SkillResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "success",
+    "status",
+    "message",
+    "artifacts",
+    "events",
+    "validation",
+    "error"
+  ],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "success": {"type": "boolean"},
+    "status": {"enum": ["succeeded", "failed"]},
+    "message": {"type": "string"},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "name", "mime_type", "size_bytes", "uri"],
+        "properties": {
+          "uri": {"type": "string", "pattern": "^artifact://"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "event_id",
+          "event",
+          "stream_id",
+          "sequence",
+          "timestamp",
+          "trace_id",
+          "session_id",
+          "conversation_id",
+          "task_id",
+          "source",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {"const": "stream.v1"},
+          "event": {
+            "enum": [
+              "tool.start",
+              "tool.progress",
+              "tool.result",
+              "file.created",
+              "tool.error"
+            ]
+          },
+          "sequence": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "operation_execution_ok": {"type": "boolean"},
+        "reopen_ok": {"type": "boolean"},
+        "semantic_ok": {"type": "boolean"},
+        "visual_ok": {"type": "boolean"},
+        "geometry_layout_ok": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "error": {"type": ["object", "null"], "additionalProperties": true}
+  }
+}

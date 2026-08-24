@@ -114,6 +114,7 @@ class SkillResult:
     message: str
     artifacts: Sequence[Artifact] = field(default_factory=tuple)
     events: Sequence[StreamEvent] = field(default_factory=tuple)
+    validation: Mapping[str, Any] = field(default_factory=dict)
     error: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
@@ -134,6 +135,8 @@ class SkillResult:
         if not all(isinstance(item, StreamEvent) for item in normalized_events):
             raise TypeError("events must contain only StreamEvent objects")
         object.__setattr__(self, "events", normalized_events)
+        if not isinstance(self.validation, Mapping):
+            raise TypeError("validation must be a mapping")
         if self.error is not None and not isinstance(self.error, Mapping):
             raise TypeError("error must be a mapping or None")
         if self.success and self.error is not None:
@@ -141,13 +144,19 @@ class SkillResult:
         if not self.success and self.error is None:
             raise ValueError("failed results require an error")
 
+    @property
+    def status(self) -> str:
+        return "succeeded" if self.success else "failed"
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "request_id": self.request_id,
             "success": self.success,
+            "status": self.status,
             "message": self.message,
             "artifacts": [item.to_dict() for item in self.artifacts],
             "events": [item.to_dict() for item in self.events],
+            "validation": dict(self.validation),
             "error": dict(self.error) if self.error is not None else None,
         }
 
@@ -155,6 +164,11 @@ class SkillResult:
     def from_dict(cls, data: Mapping[str, Any]) -> "SkillResult":
         if not isinstance(data, Mapping):
             raise TypeError("skill result must be a mapping")
+        status = data.get("status")
+        if status is not None:
+            expected = "succeeded" if data["success"] else "failed"
+            if status != expected:
+                raise ValueError("status must agree with success")
         return cls(
             request_id=data["request_id"],
             success=data["success"],
@@ -163,5 +177,6 @@ class SkillResult:
                 Artifact.from_dict(item) for item in data.get("artifacts", [])
             ),
             events=tuple(StreamEvent.from_dict(item) for item in data.get("events", [])),
+            validation=data.get("validation", {}),
             error=data.get("error"),
         )

@@ -15,6 +15,7 @@ Design goals for text replacement:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -26,12 +27,27 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    import fitz  # PyMuPDF
+    import pymupdf as fitz
 except Exception as exc:
     print(json.dumps({"ok": False, "error": f"PyMuPDF is required: {exc}"}, ensure_ascii=False))
     sys.exit(2)
 
+try:
+    from PIL import Image, ImageChops, ImageDraw
+except Exception:
+    Image = ImageChops = ImageDraw = None
+
 VERSION = "2.0.0-production.1"
+SKILL_VERSION = "1.2.0"
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+
+
+class PDFEditorError(ValueError):
+    """A stable, machine-readable PDF Editor failure."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
 
 ANCHORS = {
     "top-left": (0.07, 0.07),
@@ -54,7 +70,13 @@ def emit_event(event: str, **payload: Any) -> None:
     """Emit machine-readable progress on stderr without corrupting stdout result JSON."""
     if not _events_enabled():
         return
-    msg = {"event": event, "tool": "pdf_editor", "version": VERSION, **payload}
+    msg = {
+        "event": event,
+        "tool": "pdf-editor",
+        "version": VERSION,
+        "skill_version": SKILL_VERSION,
+        **payload,
+    }
     sys.stderr.write(json.dumps(msg, ensure_ascii=False) + "\n")
     sys.stderr.flush()
 
@@ -149,6 +171,49 @@ def validate_pdf(path: str) -> dict[str, Any]:
         }
     finally:
         doc.close()
+
+
+def _page_fingerprint(page: fitz.Page) -> dict[str, Any]:
+    """Return deterministic semantic and render fingerprints for one page."""
+
+    pix = page.get_pixmap(matrix=fitz.Matrix(1.0, 1.0), colorspace=fitz.csGRAY, alpha=False)
+    text = page.get_text("text")
+    return {
+        "width": round(page.rect.width, 4),
+        "height": round(page.rect.height, 4),
+        "rotation": int(page.rotation),
+        "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "render_sha256": hashlib.sha256(pix.samples).hexdigest(),
+        "render_width": pix.width,
+        "render_height": pix.height,
+    }
+
+
+def _document_snapshot(doc: fitz.Document) -> list[dict[str, Any]]:
+    return [_page_fingerprint(doc[index]) for index in range(doc.page_count)]
+
+
+def _compare_document_snapshot(
+    expected: list[dict[str, Any]], actual_doc: fitz.Document
+) -> dict[str, Any]:
+    actual = _document_snapshot(actual_doc)
+    mismatches = []
+    if len(expected) != len(actual):
+        mismatches.append({"kind": "page_count", "expected": len(expected), "actual": len(actual)})
+    for index, (before, after) in enumerate(zip(expected, actual), start=1):
+        changed = {
+            key: {"expected": before.get(key), "actual": after.get(key)}
+            for key in before
+            if before.get(key) != after.get(key)
+        }
+        if changed:
+            mismatches.append({"kind": "page_fingerprint", "page": index, "fields": changed})
+    return {
+        "ok": not mismatches,
+        "expected_pages": len(expected),
+        "actual_pages": len(actual),
+        "mismatches": mismatches,
+    }
 
 
 def _is_subset_font_name(name: str) -> bool:
@@ -250,9 +315,12 @@ def _font_registry_dirs() -> list[Path]:
                 dirs.append(Path(item.strip()))
     # Private / user-controlled registries first.
     dirs += [
+        SKILL_ROOT / "resources" / "fonts",
+        SKILL_ROOT / "font-registry",
         Path("/app/working/font-registry"),
         Path("/app/working/fonts"),
         Path.home() / ".fonts",
+        Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts",
     ]
     uniq: list[Path] = []
     seen = set()
@@ -510,6 +578,145 @@ def _resolve_font(doc: fitz.Document, page: fitz.Page, span: dict[str, Any], new
     return {
         "font": fobj, "kind": "visual_match", "source": source,
         "fontfile": token if token != "china-s" else None, "fontbuffer": None, "diagnostics": {},
+    }
+
+
+def _font_file_priority(path: Path) -> tuple[int, str]:
+    name = path.name.lower().replace(" ", "")
+    preferred = (
+        "simhei.ttf",
+        "deng.ttf",
+        "msyh.ttc",
+        "simsun.ttc",
+        "notosanssc(truetype).otf",
+        "notosanssc-vf.ttf",
+        "notosanscjksc",
+    )
+    for index, token in enumerate(preferred):
+        if token in name:
+            return index, name
+    return len(preferred), name
+
+
+def _font_supports_text(font_obj: fitz.Font, text: str) -> tuple[bool, dict[str, Any]]:
+    required = sorted({char for char in text if not char.isspace()})
+    missing = [char for char in required if int(font_obj.has_glyph(ord(char)) or 0) <= 0]
+    render_ok, render_failed, ink = _isolated_glyph_check(font_obj, "".join(required))
+    return not missing and render_ok, {
+        "required": required,
+        "missing": missing,
+        "render_failed": render_failed,
+        "ink": ink,
+    }
+
+
+def _resolve_complete_glyph_font(
+    doc: fitz.Document, page: fitz.Page, text: str
+) -> dict[str, Any]:
+    """Resolve a full font that really renders every page-number glyph."""
+
+    for span in _raw_spans(page):
+        for candidate in _embedded_font_candidates(
+            doc, page, str(span.get("font", "")), span, text
+        ):
+            if not candidate.get("render_ok"):
+                continue
+            ok, coverage = _font_supports_text(candidate["font"], text)
+            if ok:
+                return {
+                    "font": candidate["font"],
+                    "kind": "embedded_complete",
+                    "source": f"embedded:{candidate['basefont']}",
+                    "coverage": coverage,
+                }
+
+    candidates = sorted(_iter_font_files(), key=_font_file_priority)
+    for path in candidates:
+        try:
+            font_obj = fitz.Font(fontfile=str(path))
+            ok, coverage = _font_supports_text(font_obj, text)
+            if ok:
+                return {
+                    "font": font_obj,
+                    "kind": "registered_complete",
+                    "source": str(path),
+                    "coverage": coverage,
+                }
+        except Exception:
+            continue
+
+    try:
+        font_obj = fitz.Font(fontname="china-s")
+        ok, coverage = _font_supports_text(font_obj, text)
+        if ok:
+            return {
+                "font": font_obj,
+                "kind": "builtin_cjk_complete",
+                "source": "pymupdf:china-s",
+                "coverage": coverage,
+            }
+    except Exception:
+        pass
+
+    raise PDFEditorError(
+        "FONT_GLYPH_UNAVAILABLE",
+        "No registered font can render every required page-number glyph.",
+    )
+
+
+def _normalize_extracted_text(value: str) -> str:
+    return value.replace("\u00a0", " ").replace("\u202f", " ")
+
+
+def _validate_rendered_glyphs(
+    page: fitz.Page,
+    expected_text: str,
+    required_chars: str,
+    clip: fitz.Rect,
+) -> dict[str, Any]:
+    """Verify required characters exist as independently rendered visual glyphs."""
+
+    raw = page.get_text("rawdict", clip=clip)
+    glyphs: dict[str, list[dict[str, Any]]] = {char: [] for char in set(required_chars)}
+    extracted_parts: list[str] = []
+    for block in raw.get("blocks", []):
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                for item in span.get("chars", []):
+                    char = str(item.get("c", ""))
+                    extracted_parts.append(char)
+                    if char not in glyphs:
+                        continue
+                    bbox = fitz.Rect(item.get("bbox", (0, 0, 0, 0))) & clip
+                    if bbox.is_empty:
+                        continue
+                    pix = page.get_pixmap(
+                        matrix=fitz.Matrix(2.0, 2.0),
+                        colorspace=fitz.csGRAY,
+                        clip=fitz.Rect(bbox.x0 - 1, bbox.y0 - 1, bbox.x1 + 1, bbox.y1 + 1),
+                        alpha=False,
+                    )
+                    ink = sum(1 for value in pix.samples if value < 240)
+                    glyphs[char].append({
+                        "bbox": [round(x, 3) for x in (bbox.x0, bbox.y0, bbox.x1, bbox.y1)],
+                        "ink_pixels": ink,
+                        "ok": ink >= 8,
+                    })
+    extracted = _normalize_extracted_text("".join(extracted_parts))
+    required_counts = {char: expected_text.count(char) for char in set(required_chars)}
+    missing = [
+        char
+        for char, count in required_counts.items()
+        if len(glyphs.get(char, [])) < count
+        or any(not item["ok"] for item in glyphs.get(char, [])[:count])
+    ]
+    return {
+        "ok": expected_text in extracted and not missing,
+        "expected_text": expected_text,
+        "extracted_text": extracted,
+        "required_counts": required_counts,
+        "glyphs": glyphs,
+        "missing_or_blank": sorted(missing),
     }
 
 
@@ -858,12 +1065,66 @@ def page_numbers(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, 
     pages = parse_pages(op.get("pages", "all"), doc.page_count)
     fs = float(op.get("font_size", 9))
     fmt = str(op.get("format", "第 {page} 页 / 共 {total} 页"))
+    page_reports = []
     for idx in pages:
         p = doc[idx]
         text = fmt.format(page=idx + 1, total=doc.page_count)
-        rect = fitz.Rect(0, p.rect.height - 30, p.rect.width, p.rect.height - 8)
-        p.insert_textbox(rect, text, fontsize=fs, fontname="helv", align=1, color=(0, 0, 0), overlay=True)
-    report.append({"action": "page_numbers", "pages": [p + 1 for p in pages]})
+        resolved = _resolve_complete_glyph_font(doc, p, text)
+        font_obj: fitz.Font = resolved["font"]
+        text_width = float(font_obj.text_length(text, fontsize=fs))
+        if text_width >= p.rect.width - 16:
+            raise ValueError("Page number text does not fit the page width")
+        baseline = p.rect.height - 13
+        origin = fitz.Point((p.rect.width - text_width) / 2.0, baseline)
+        clip = fitz.Rect(
+            max(0, origin.x - 2),
+            max(0, baseline - fs * 1.45),
+            min(p.rect.width, origin.x + text_width + 2),
+            min(p.rect.height, baseline + fs * 0.35),
+        )
+        before = p.get_pixmap(
+            matrix=fitz.Matrix(2.0, 2.0), colorspace=fitz.csGRAY, clip=clip, alpha=False
+        )
+        writer = fitz.TextWriter(p.rect)
+        writer.append(origin, text, font=font_obj, fontsize=fs)
+        writer.write_text(p, color=(0, 0, 0), overlay=True)
+        after = p.get_pixmap(
+            matrix=fitz.Matrix(2.0, 2.0), colorspace=fitz.csGRAY, clip=clip, alpha=False
+        )
+        changed, _ = _pix_diff_pixels(before, after)
+        glyph_validation = _validate_rendered_glyphs(p, text, "第页共", clip)
+        if changed < 12 or not glyph_validation["ok"]:
+            raise PDFEditorError(
+                "FONT_GLYPH_UNAVAILABLE",
+                f"Page {idx + 1} page-number glyph validation failed: {glyph_validation}",
+            )
+        page_reports.append({
+            "page": idx + 1,
+            "text": text,
+            "bbox": [round(x, 3) for x in (clip.x0, clip.y0, clip.x1, clip.y1)],
+            "font_kind": resolved["kind"],
+            "font_source": resolved["source"],
+            "glyph_coverage": resolved["coverage"],
+            "changed_pixels": changed,
+            "glyph_validation": glyph_validation,
+        })
+        emit_event(
+            "tool.progress",
+            action="page_numbers",
+            page=idx + 1,
+            status="glyph_validated",
+            message=f"Validated page-number glyphs on page {idx + 1}",
+        )
+    report.append({
+        "action": "page_numbers",
+        "pages": [p + 1 for p in pages],
+        "format": fmt,
+        "page_reports": page_reports,
+        "validation": {
+            "ok": all(item["glyph_validation"]["ok"] for item in page_reports),
+            "glyphs_required": ["第", "页", "共"],
+        },
+    })
 
 
 
@@ -907,15 +1168,19 @@ def delete_text(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, A
 
 
 def insert_pages(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, Any]]) -> None:
+    before_count = doc.page_count
+    before_snapshot = _document_snapshot(doc)
     at = int(op.get("at", doc.page_count + 1))
     if at < 1 or at > doc.page_count + 1:
         raise ValueError(f"insert_pages 'at' must be in 1..{doc.page_count + 1}")
     source = op.get("source")
     inserted = 0
+    inserted_expected: list[dict[str, Any]] = []
     if source:
         src = open_pdf(str(source))
         try:
             src_pages = parse_pages(op.get("source_pages", "all"), src.page_count)
+            inserted_expected = [_page_fingerprint(src[index]) for index in src_pages]
             start_at = at - 1
             for offset, src_idx in enumerate(src_pages):
                 doc.insert_pdf(src, from_page=src_idx, to_page=src_idx, start_at=start_at + offset)
@@ -941,7 +1206,64 @@ def insert_pages(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, 
             doc.new_page(pno=(at - 1) + n, width=width, height=height)
             inserted += 1
         mode = "blank"
-    report.append({"action":"insert_pages","at":at,"inserted":inserted,"mode":mode})
+
+    after_snapshot = _document_snapshot(doc)
+    insert_index = at - 1
+    inserted_slice = after_snapshot[insert_index:insert_index + inserted]
+    prefix_ok = after_snapshot[:insert_index] == before_snapshot[:insert_index]
+    suffix_ok = after_snapshot[insert_index + inserted:] == before_snapshot[insert_index:]
+    source_content_ok = mode == "blank" or inserted_slice == inserted_expected
+    inserted_page_reports = []
+    inserted_xrefs = []
+    for page_index in range(insert_index, insert_index + inserted):
+        page = doc[page_index]
+        xref = int(doc.page_xref(page_index))
+        inserted_xrefs.append(xref)
+        pix = page.get_pixmap(
+            matrix=fitz.Matrix(1.0, 1.0), colorspace=fitz.csGRAY, alpha=False
+        )
+        ink_pixels = sum(1 for value in pix.samples if value < 250)
+        render_ok = pix.width > 0 and pix.height > 0 and len(pix.samples) > 0
+        blank_ok = mode != "blank" or (not page.get_text("text").strip() and ink_pixels == 0)
+        inserted_page_reports.append({
+            "page": page_index + 1,
+            "xref": xref,
+            "render_ok": render_ok,
+            "render_width": pix.width,
+            "render_height": pix.height,
+            "ink_pixels": ink_pixels,
+            "blank_ok": blank_ok,
+            "fingerprint": after_snapshot[page_index],
+        })
+    page_tree_ok = (
+        doc.page_count == before_count + inserted
+        and len(set(inserted_xrefs)) == inserted
+        and all(xref > 0 for xref in inserted_xrefs)
+    )
+    independent_render_ok = all(
+        item["render_ok"] and item["blank_ok"] for item in inserted_page_reports
+    )
+    validation = {
+        "ok": page_tree_ok and prefix_ok and suffix_ok and source_content_ok and independent_render_ok,
+        "page_tree_ok": page_tree_ok,
+        "order_ok": prefix_ok and suffix_ok,
+        "prefix_ok": prefix_ok,
+        "suffix_ok": suffix_ok,
+        "source_content_ok": source_content_ok,
+        "independent_render_ok": independent_render_ok,
+        "before_page_count": before_count,
+        "after_page_count": doc.page_count,
+        "inserted_pages": inserted_page_reports,
+    }
+    if not validation["ok"]:
+        raise PDFEditorError("INSERT_PAGE_VALIDATION_FAILED", str(validation))
+    report.append({
+        "action": "insert_pages",
+        "at": at,
+        "inserted": inserted,
+        "mode": mode,
+        "validation": validation,
+    })
 
 
 def reorder_pages(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, Any]]) -> None:
@@ -1005,6 +1327,101 @@ def add_image(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, Any
     report.append({"action":"add_image","path":image_path,"placements":placed})
 
 
+def _image_digest_hex(value: Any) -> str:
+    if isinstance(value, bytes):
+        return value.hex()
+    return str(value)
+
+
+def _normalize_image_info(page: fitz.Page, info: dict[str, Any]) -> dict[str, Any]:
+    bbox = fitz.Rect(info.get("bbox", (0, 0, 0, 0)))
+    transform = tuple(float(x) for x in info.get("transform", (1, 0, 0, 1, 0, 0)))
+    return {
+        "page": page.number + 1,
+        "xref": int(info.get("xref", 0) or 0),
+        "bbox": [round(x, 6) for x in (bbox.x0, bbox.y0, bbox.x1, bbox.y1)],
+        "transform": [round(x, 6) for x in transform],
+        "width": int(info.get("width", 0) or 0),
+        "height": int(info.get("height", 0) or 0),
+        "rotation": int(page.rotation),
+        "digest": _image_digest_hex(info.get("digest", "")),
+    }
+
+
+def _capture_image_occurrences(
+    doc: fitz.Document, *, xref: int | None = None
+) -> list[dict[str, Any]]:
+    occurrences = []
+    for page_index in range(doc.page_count):
+        page = doc[page_index]
+        for info in page.get_image_info(xrefs=True):
+            item = _normalize_image_info(page, info)
+            if xref is None or item["xref"] == xref:
+                occurrences.append(item)
+    return occurrences
+
+
+def _geometry_difference(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    bbox_diff = [abs(float(a) - float(b)) for a, b in zip(before["bbox"], after["bbox"])]
+    transform_diff = [
+        abs(float(a) - float(b)) for a, b in zip(before["transform"], after["transform"])
+    ]
+    return {
+        "page": before["page"],
+        "before_xref": before["xref"],
+        "after_xref": after["xref"],
+        "bbox_max_abs": round(max(bbox_diff, default=0.0), 8),
+        "transform_max_abs": round(max(transform_diff, default=0.0), 8),
+        "page_rotation_delta": abs(int(before["rotation"]) - int(after["rotation"])),
+    }
+
+
+def _image_page_visual_diff(
+    before: fitz.Pixmap,
+    after: fitz.Pixmap,
+    bboxes: list[list[float]],
+    scale: float,
+) -> dict[str, Any]:
+    if before.width != after.width or before.height != after.height or before.n != after.n:
+        return {"ok": False, "reason": "render_shape_changed"}
+    if Image is None or ImageChops is None or ImageDraw is None:
+        raise PDFEditorError(
+            "VISUAL_VALIDATION_DEPENDENCY_MISSING",
+            "Pillow is required for image replacement visual validation.",
+        )
+    mode = "RGB" if before.n >= 3 else "L"
+    image_before = Image.frombytes(mode, (before.width, before.height), before.samples)
+    image_after = Image.frombytes(mode, (after.width, after.height), after.samples)
+    changed = ImageChops.difference(image_before, image_after).convert("L")
+    changed = changed.point(lambda value: 255 if value > 10 else 0)
+    target_mask = Image.new("L", (before.width, before.height), 0)
+    draw = ImageDraw.Draw(target_mask)
+    for bbox in bboxes:
+        rect = fitz.Rect(bbox)
+        draw.rectangle((
+            max(0, int((rect.x0 - 2) * scale)),
+            max(0, int((rect.y0 - 2) * scale)),
+            min(before.width - 1, int((rect.x1 + 2) * scale)),
+            min(before.height - 1, int((rect.y1 + 2) * scale)),
+        ), fill=255)
+    non_target_mask = ImageChops.invert(target_mask)
+    changed_target_image = ImageChops.multiply(changed, target_mask)
+    changed_non_target_image = ImageChops.multiply(changed, non_target_mask)
+    changed_target = sum(changed_target_image.histogram()[1:])
+    changed_non_target = sum(changed_non_target_image.histogram()[1:])
+    total_target = sum(target_mask.histogram()[1:])
+    total_non_target = before.width * before.height - total_target
+    target_ratio = changed_target / max(1, total_target)
+    non_target_ratio = changed_non_target / max(1, total_non_target)
+    return {
+        "ok": target_ratio >= 0.01 and non_target_ratio <= 0.003,
+        "target_changed_pixels": changed_target,
+        "target_diff": round(target_ratio, 8),
+        "non_target_changed_pixels": changed_non_target,
+        "non_target_diff": round(non_target_ratio, 8),
+    }
+
+
 def replace_image(doc: fitz.Document, op: dict[str, Any], report: list[dict[str, Any]]) -> None:
     image_path = str(op.get("path", ""))
     if not image_path or not Path(image_path).is_file():
@@ -1031,9 +1448,96 @@ def replace_image(doc: fitz.Document, op: dict[str, Any], report: list[dict[str,
         selected = [x + 1 for x in parse_pages(requested, doc.page_count)]
         if set(selected) != set(referencing):
             raise ValueError(f"xref {xref} is shared on pages {referencing}; page-specific replacement is unsafe. Select all referencing pages.")
-    # xref replacement is document-global for all references to that image object.
+
+    before_geometry = _capture_image_occurrences(doc, xref=xref)
+    if not before_geometry:
+        raise PDFEditorError("IMAGE_GEOMETRY_UNAVAILABLE", f"No placement geometry for xref {xref}")
+    scale = 2.0
+    before_page_renders = {
+        page_no: doc[page_no - 1].get_pixmap(
+            matrix=fitz.Matrix(scale, scale), colorspace=fitz.csRGB, alpha=False
+        )
+        for page_no in referencing
+    }
+    before_page_image_counts = {
+        page_no: len(doc[page_no - 1].get_image_info(xrefs=True)) for page_no in referencing
+    }
+
+    # PyMuPDF rewrites the image resource while retaining each existing draw matrix.
     doc[referencing[0] - 1].replace_image(xref, filename=image_path)
-    report.append({"action":"replace_image","xref":xref,"pages":referencing,"path":image_path,"scope":"shared_xref"})
+    after_all = _capture_image_occurrences(doc)
+    matched_after = []
+    geometry_diff = []
+    used_indexes: set[int] = set()
+    tolerance = float(op.get("geometry_tolerance", 0.01))
+    for before_item in before_geometry:
+        candidates = []
+        for index, candidate in enumerate(after_all):
+            if index in used_indexes or candidate["page"] != before_item["page"]:
+                continue
+            diff = _geometry_difference(before_item, candidate)
+            score = max(diff["bbox_max_abs"], diff["transform_max_abs"])
+            candidates.append((score, index, candidate, diff))
+        if not candidates:
+            raise PDFEditorError(
+                "IMAGE_GEOMETRY_CHANGED",
+                f"No replacement image remains at page {before_item['page']} placement",
+            )
+        score, index, candidate, diff = min(candidates, key=lambda item: item[0])
+        if score > tolerance or diff["page_rotation_delta"] != 0:
+            raise PDFEditorError("IMAGE_GEOMETRY_CHANGED", str(diff))
+        used_indexes.add(index)
+        matched_after.append(candidate)
+        geometry_diff.append(diff)
+
+    page_visual = []
+    for page_no in referencing:
+        after_render = doc[page_no - 1].get_pixmap(
+            matrix=fitz.Matrix(scale, scale), colorspace=fitz.csRGB, alpha=False
+        )
+        bboxes = [item["bbox"] for item in before_geometry if item["page"] == page_no]
+        item = _image_page_visual_diff(before_page_renders[page_no], after_render, bboxes, scale)
+        item["page"] = page_no
+        page_visual.append(item)
+
+    after_page_image_counts = {
+        page_no: len(doc[page_no - 1].get_image_info(xrefs=True)) for page_no in referencing
+    }
+    old_digests = {item["digest"] for item in before_geometry}
+    new_digests = {item["digest"] for item in matched_after}
+    geometry_ok = all(
+        item["bbox_max_abs"] <= tolerance
+        and item["transform_max_abs"] <= tolerance
+        and item["page_rotation_delta"] == 0
+        for item in geometry_diff
+    )
+    old_content_absent = old_digests.isdisjoint(new_digests)
+    new_content_present = bool(new_digests) and all(item["width"] > 0 and item["height"] > 0 for item in matched_after)
+    no_overlay = before_page_image_counts == after_page_image_counts and len(matched_after) == len(before_geometry)
+    visual_ok = all(item.get("ok", False) for item in page_visual)
+    validation = {
+        "ok": geometry_ok and old_content_absent and new_content_present and no_overlay and visual_ok,
+        "geometry_ok": geometry_ok,
+        "old_content_absent": old_content_absent,
+        "new_content_present": new_content_present,
+        "no_overlay": no_overlay,
+        "visual_ok": visual_ok,
+        "geometry_tolerance": tolerance,
+        "page_visual": page_visual,
+    }
+    if not validation["ok"]:
+        raise PDFEditorError("IMAGE_REPLACEMENT_VALIDATION_FAILED", str(validation))
+    report.append({
+        "action": "replace_image",
+        "xref": xref,
+        "pages": referencing,
+        "path": image_path,
+        "scope": "shared_xref",
+        "before_image_geometry": before_geometry,
+        "after_image_geometry": matched_after,
+        "geometry_diff": geometry_diff,
+        "validation": validation,
+    })
 
 OPS = {
     "replace_text": replace_text,
@@ -1127,10 +1631,122 @@ def _visual_validate_text_edits(input_path: str, output_path: str, report: list[
     finally:
         before.close(); after.close()
 
+
+def _validate_post_save_operations(
+    output_doc: fitz.Document, report: list[dict[str, Any]]
+) -> dict[str, Any]:
+    checks = []
+    semantic_ok = True
+    visual_ok = True
+    geometry_ok = True
+    for operation in report:
+        action = operation.get("action")
+        immediate = operation.get("validation", {})
+        if immediate and not immediate.get("ok", False):
+            checks.append({"action": action, "ok": False, "stage": "in_memory", "details": immediate})
+            semantic_ok = visual_ok = geometry_ok = False
+            continue
+
+        if action == "insert_pages":
+            if not operation.get("post_save_position_validation_required", True):
+                checks.append({
+                    "action": action,
+                    "ok": True,
+                    "stage": "reopen",
+                    "reason": "position_superseded_by_later_structural_operation",
+                })
+                continue
+            inserted_pages = immediate.get("inserted_pages", [])
+            reopened = []
+            for item in inserted_pages:
+                page_number = int(item["page"])
+                if not 1 <= page_number <= output_doc.page_count:
+                    reopened.append({"page": page_number, "ok": False, "reason": "missing"})
+                    continue
+                page = output_doc[page_number - 1]
+                pix = page.get_pixmap(
+                    matrix=fitz.Matrix(1.0, 1.0), colorspace=fitz.csGRAY, alpha=False
+                )
+                fingerprint_ok = _page_fingerprint(page) == item["fingerprint"]
+                xref = int(output_doc.page_xref(page_number - 1))
+                reopened.append({
+                    "page": page_number,
+                    "xref": xref,
+                    "render_ok": pix.width > 0 and pix.height > 0 and bool(pix.samples),
+                    "fingerprint_ok": fingerprint_ok,
+                    "ok": xref > 0 and fingerprint_ok and pix.width > 0 and pix.height > 0,
+                })
+            ok = bool(reopened) and all(item["ok"] for item in reopened)
+            checks.append({"action": action, "ok": ok, "stage": "reopen", "pages": reopened})
+            semantic_ok = semantic_ok and ok
+            visual_ok = visual_ok and ok
+
+        elif action == "replace_image":
+            actual = _capture_image_occurrences(output_doc)
+            matches = []
+            used: set[int] = set()
+            tolerance = float(operation.get("validation", {}).get("geometry_tolerance", 0.01))
+            for expected in operation.get("after_image_geometry", []):
+                candidates = []
+                for index, candidate in enumerate(actual):
+                    if index in used or candidate["page"] != expected["page"]:
+                        continue
+                    diff = _geometry_difference(expected, candidate)
+                    digest_penalty = 0 if candidate["digest"] == expected["digest"] else 1
+                    score = max(diff["bbox_max_abs"], diff["transform_max_abs"]) + digest_penalty
+                    candidates.append((score, index, candidate, diff))
+                if not candidates:
+                    matches.append({"expected": expected, "ok": False, "reason": "missing"})
+                    continue
+                _, index, candidate, diff = min(candidates, key=lambda item: item[0])
+                used.add(index)
+                ok = (
+                    candidate["digest"] == expected["digest"]
+                    and diff["bbox_max_abs"] <= tolerance
+                    and diff["transform_max_abs"] <= tolerance
+                    and diff["page_rotation_delta"] == 0
+                )
+                matches.append({"expected": expected, "actual": candidate, "diff": diff, "ok": ok})
+            ok = bool(matches) and all(item["ok"] for item in matches)
+            checks.append({"action": action, "ok": ok, "stage": "reopen", "placements": matches})
+            semantic_ok = semantic_ok and ok
+            geometry_ok = geometry_ok and ok
+            visual_ok = visual_ok and ok
+
+        elif action == "page_numbers":
+            page_checks = []
+            for expected in operation.get("page_reports", []):
+                page_number = int(expected["page"])
+                if not 1 <= page_number <= output_doc.page_count:
+                    page_checks.append({"page": page_number, "ok": False, "reason": "missing"})
+                    continue
+                page = output_doc[page_number - 1]
+                glyphs = _validate_rendered_glyphs(
+                    page,
+                    str(expected["text"]),
+                    "第页共",
+                    fitz.Rect(expected["bbox"]),
+                )
+                page_checks.append({"page": page_number, "ok": glyphs["ok"], "glyphs": glyphs})
+            ok = bool(page_checks) and all(item["ok"] for item in page_checks)
+            checks.append({"action": action, "ok": ok, "stage": "reopen", "pages": page_checks})
+            semantic_ok = semantic_ok and ok
+            visual_ok = visual_ok and ok
+
+    return {
+        "ok": semantic_ok and visual_ok and geometry_ok,
+        "semantic_ok": semantic_ok,
+        "visual_ok": visual_ok,
+        "geometry_layout_ok": geometry_ok,
+        "checks": checks,
+    }
+
 def apply_plan(input_path: str, output_path: str, plan: dict[str, Any]) -> dict[str, Any]:
-    emit_event("tool.start", action="apply", input=input_path)
+    emit_event("tool.start", action="apply", input=input_path, message="PDF Editor started")
+    emit_event("tool.progress", action="apply", status="analyzing", message="Analyzing PDF")
     doc = open_pdf(input_path)
     report: list[dict[str, Any]] = []
+    expected_snapshot: list[dict[str, Any]] = []
     try:
         operations = plan.get("operations", [])
         if not isinstance(operations, list) or not operations:
@@ -1140,16 +1756,51 @@ def apply_plan(input_path: str, output_path: str, plan: dict[str, Any]) -> dict[
             fn = OPS.get(action)
             if not fn:
                 raise ValueError(f"Unsupported action: {action!r}")
-            emit_event("tool.progress", action=action, operation=i, total_operations=len(operations), status="start")
+            emit_event(
+                "tool.progress",
+                action=action,
+                operation=i,
+                total_operations=len(operations),
+                status="start",
+                message=f"Starting {action}",
+            )
+            report_start = len(report)
             fn(doc, op, report)
-            emit_event("tool.progress", action=action, operation=i, total_operations=len(operations), status="done")
+            if action == "insert_pages" and len(report) > report_start:
+                later_actions = {
+                    str(item.get("action", "")) for item in operations[i:]
+                }
+                report[-1]["post_save_position_validation_required"] = not bool(
+                    later_actions & {"delete_pages", "insert_pages", "reorder_pages"}
+                )
+            emit_event(
+                "tool.progress",
+                action=action,
+                operation=i,
+                total_operations=len(operations),
+                status="done",
+                progress={"current": i, "total": len(operations), "unit": "operation"},
+                message=f"Completed {action}",
+            )
+        failed_operations = [
+            item for item in report if item.get("validation") and not item["validation"].get("ok", False)
+        ]
+        if failed_operations:
+            raise PDFEditorError("OPERATION_VALIDATION_FAILED", str(failed_operations))
+        if any(item.get("action") == "page_numbers" for item in report):
+            doc.subset_fonts()
+        expected_snapshot = _document_snapshot(doc)
         safe_save(doc, input_path, output_path)
     finally:
         doc.close()
 
     semantic = []
+    snapshot_validation: dict[str, Any] = {}
+    operation_validation: dict[str, Any] = {}
     outdoc = fitz.open(output_path)
     try:
+        snapshot_validation = _compare_document_snapshot(expected_snapshot, outdoc)
+        operation_validation = _validate_post_save_operations(outdoc, report)
         for r in report:
             action = r.get("action")
             if action not in {"replace_text", "delete_text"}:
@@ -1174,15 +1825,34 @@ def apply_plan(input_path: str, output_path: str, plan: dict[str, Any]) -> dict[
     semantic_ok = all(x["ok"] for x in semantic) if semantic else True
     if not semantic_ok:
         raise ValueError(f"Post-save semantic validation failed: {semantic}")
+    emit_event(
+        "tool.progress",
+        action="apply",
+        status="visual_validation",
+        message="Running visual acceptance",
+    )
     visual = _visual_validate_text_edits(input_path, output_path, report)
     if visual.get("performed") and not visual.get("ok"):
         raise ValueError(f"Post-save visual validation failed: {visual}")
+    if not snapshot_validation.get("ok", False):
+        raise PDFEditorError("PDF_REOPEN_SNAPSHOT_MISMATCH", str(snapshot_validation))
+    if not operation_validation.get("ok", False):
+        raise PDFEditorError("OPERATION_VALIDATION_FAILED", str(operation_validation))
     validation = validate_pdf(output_path)
-    validation.update({"semantic_ok": semantic_ok, "visual_ok": bool(visual.get("ok", True)), "visual": visual})
-    result = {"ok": True, "version": VERSION, "input": input_path, "output": output_path,
+    validation.update({
+        "operation_execution_ok": True,
+        "reopen_ok": bool(validation.get("ok")),
+        "semantic_ok": semantic_ok and operation_validation.get("semantic_ok", False),
+        "visual_ok": bool(visual.get("ok", True)) and operation_validation.get("visual_ok", False),
+        "geometry_layout_ok": operation_validation.get("geometry_layout_ok", False),
+        "visual": visual,
+        "operations": operation_validation,
+        "post_save_snapshot": snapshot_validation,
+    })
+    result = {"ok": True, "version": VERSION, "skill_version": SKILL_VERSION, "input": input_path, "output": output_path,
               "operations": report, "validation": validation, "semantic_validation": semantic}
-    emit_event("file.ready", output=output_path)
-    emit_event("tool.result", ok=True, output=output_path)
+    emit_event("file.created", output=output_path, message="Edited PDF created")
+    emit_event("tool.result", ok=True, status="succeeded", output=output_path, message="PDF Editor completed")
     return result
 
 
@@ -1202,7 +1872,7 @@ def cmd_info(args):
                 "rotation": p.rotation, "text_preview": p.get_text("text")[:350].replace("\n", " "),
                 "fonts": [{"font": a, "size": b, "flags": c} for a, b, c in fonts[:20]],
             })
-        jprint({"ok": True, "version": VERSION, "input": args.input, "pages_count": doc.page_count,
+        jprint({"ok": True, "version": VERSION, "skill_version": SKILL_VERSION, "input": args.input, "pages_count": doc.page_count,
                 "classification": classify_pdf(doc),
                 "font_registry_dirs": [str(x) for x in _font_registry_dirs()], "pages": pages})
     finally:
@@ -1252,8 +1922,8 @@ def cmd_merge(args):
         _save_new_document(out, args.output, args.inputs)
     finally:
         out.close()
-    result={"ok": True, "version": VERSION, "action": "merge", "output": args.output, "validation": validate_pdf(args.output)}
-    emit_event("file.ready", output=args.output); emit_event("tool.result", ok=True, output=args.output)
+    result={"ok": True, "version": VERSION, "skill_version": SKILL_VERSION, "action": "merge", "output": args.output, "validation": validate_pdf(args.output)}
+    emit_event("file.created", output=args.output); emit_event("tool.result", ok=True, status="succeeded", output=args.output)
     jprint(result)
 
 
@@ -1268,9 +1938,9 @@ def cmd_extract(args):
         _save_new_document(out, args.output, [args.input])
     finally:
         out.close(); src.close()
-    result={"ok": True, "version": VERSION, "action": "extract_pages", "pages": [p + 1 for p in pages],
+    result={"ok": True, "version": VERSION, "skill_version": SKILL_VERSION, "action": "extract_pages", "pages": [p + 1 for p in pages],
             "output": args.output, "validation": validate_pdf(args.output)}
-    emit_event("file.ready", output=args.output); emit_event("tool.result", ok=True, output=args.output)
+    emit_event("file.created", output=args.output); emit_event("tool.result", ok=True, status="succeeded", output=args.output)
     jprint(result)
 
 
@@ -1302,7 +1972,7 @@ def cmd_split(args):
                 out.close()
     finally:
         src.close()
-    jprint({"ok":True,"version":VERSION,"action":"split","outputs":outputs})
+    jprint({"ok":True,"version":VERSION,"skill_version":SKILL_VERSION,"action":"split","outputs":outputs})
 
 def build_parser():
     p = argparse.ArgumentParser(description=f"QwenPaw deterministic PDF editor V{VERSION}")
@@ -1320,8 +1990,20 @@ def main():
     try:
         args.func(args)
     except Exception as exc:
-        emit_event("message.error", error=str(exc), error_type=type(exc).__name__)
-        jprint({"ok": False, "version": VERSION, "error": str(exc), "type": type(exc).__name__})
+        code = getattr(exc, "code", "PDF_EDITOR_ERROR")
+        emit_event(
+            "tool.error",
+            error={"code": code, "message": str(exc), "retryable": False},
+            error_type=type(exc).__name__,
+        )
+        jprint({
+            "ok": False,
+            "version": VERSION,
+            "skill_version": SKILL_VERSION,
+            "code": code,
+            "error": str(exc),
+            "type": type(exc).__name__,
+        })
         sys.exit(1)
 
 

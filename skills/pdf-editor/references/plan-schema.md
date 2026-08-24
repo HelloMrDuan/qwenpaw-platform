@@ -70,8 +70,10 @@ The list must be a full permutation of all current pages.
 ## page_numbers
 
 ```json
-{"action":"page_numbers","pages":"all","format":"{page}/{total}","font_size":9}
+{"action":"page_numbers","pages":"all","format":"第 {page} 页 / 共 {total} 页","font_size":9}
 ```
+
+V1.2 requires a complete CJK font and post-save visual glyph validation. Missing glyph coverage fails with `FONT_GLYPH_UNAVAILABLE`.
 
 ## add_image
 
@@ -87,4 +89,4 @@ or use `position`, `width`, optional `height`.
 {"action":"replace_image","page":1,"image_index":1,"path":"/abs/new-logo.png"}
 ```
 
-or specify `xref` directly. Replacement is shared-xref based. If the xref is referenced on multiple pages, a page-subset request is rejected as unsafe.
+or specify `xref` directly. Replacement is shared-xref based. If the xref is referenced on multiple pages, a page-subset request is rejected as unsafe. V1.2 records `before_image_geometry`, `after_image_geometry`, and `geometry_diff`, and rejects placement changes, overlays, unchanged target content, or excessive non-target visual differences.
