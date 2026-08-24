@@ -47,8 +47,14 @@
 
 建议位置：`tests/streaming/`。
 
-## 后续测试入口
+## 当前测试入口
 
-待 QwenPaw/AgentScope 运行时和依赖来源恢复后，再选择并锁定测试框架，统一为一个本地命令和一个 CI 命令。目前仓库没有可验证的 pytest/unittest 项目入口，因此本阶段不虚构命令。
+Extension Contract 基线采用 Python 3.11 标准库 `unittest`，不新增开发依赖：
 
-最小验收顺序应为：配置静态校验 → Console 冒烟 → Skill 契约 → Tool fake 集成 → Streaming 契约 → 测试租户 Channel 集成。
+```powershell
+py -3.11 -m unittest discover -s tests/contracts -p "test_*.py" -v
+```
+
+该命令只运行 `core/contracts/` 的离线 schema、校验、事件顺序和 Fake Adapter 测试，不启动 QwenPaw/AgentScope Runtime，也不访问真实 Channel。
+
+待 Runtime 和依赖来源恢复后，再为 Agent、Skill 和集成测试选择统一框架与 CI 入口。最小验收顺序仍为：配置静态校验 → Console 冒烟 → Skill 契约 → Tool fake 集成 → Streaming 契约 → 测试租户 Channel 集成。
