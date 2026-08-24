@@ -12,6 +12,7 @@ from .message import (
     UserRef,
 )
 from .skill import SkillMetadata, SkillRequest, SkillResult
+from .stream_consumer import StreamConsumer
 from .streaming import (
     AGENT_TERMINAL_EVENTS,
     STREAM_SCHEMA_VERSION,
@@ -41,6 +42,7 @@ __all__ = [
     "SkillResult",
     "StreamEvent",
     "StreamEventType",
+    "StreamConsumer",
     "StreamSequenceError",
     "StreamSource",
     "UserRef",
