@@ -45,6 +45,18 @@ sessions/*
 media/
 tmp/
 
+# Local sanitized PDF acceptance fixtures (structure only in Git)
+tests/fixtures/pdf-editor/simple/*
+!tests/fixtures/pdf-editor/simple/.gitkeep
+tests/fixtures/pdf-editor/font/*
+!tests/fixtures/pdf-editor/font/.gitkeep
+tests/fixtures/pdf-editor/image/*
+!tests/fixtures/pdf-editor/image/.gitkeep
+tests/fixtures/pdf-editor/scanned/*
+!tests/fixtures/pdf-editor/scanned/.gitkeep
+tests/fixtures/pdf-editor/complex/*
+!tests/fixtures/pdf-editor/complex/.gitkeep
+
 # Local environment and tool caches
 .env
 .env.*
