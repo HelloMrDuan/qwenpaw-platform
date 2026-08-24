@@ -1,0 +1,35 @@
+# QwenPaw platform Skill support dependency lock
+# Generated: 2026-08-24
+# Target: CPython 3.11 on Windows AMD64
+# Resolver source: official PyPI, using pip --dry-run (no packages installed)
+#
+# Scope:
+# - Locks the Python packages evidenced by current Skill imports and Skill docs.
+# - Includes optional OCR support because pytesseract is documented by the PDF tools.
+# - Does not include QwenPaw or AgentScope. Their distribution source and exact
+#   versions are absent from this export, so inventing pins would not be reproducible.
+# - No Python development-only dependency was found in the repository.
+#
+# Install:
+#   py -3.11 -m pip install --require-hashes -r requirements.lock.txt
+
+# Direct Skill dependencies
+defusedxml==0.7.1 --hash=sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61
+lxml==6.1.2 --hash=sha256:b3db5497af55f7a557c95265dd3b91c75dc56364a7b59f258c45fa5576dce058
+openpyxl==3.1.5 --hash=sha256:5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2
+pdf2image==1.17.0 --hash=sha256:ecdd58d7afb810dffe21ef2b1bbc057ef434dabbac6c33778a38a3f7744a27e2
+pdfplumber==0.11.10 --hash=sha256:7741ea81bf165b474b153e6789d10d18e06b6ddcf3ec84289c3ef2fed6802580
+pillow==12.3.0 --hash=sha256:8e95e1385e4998ae9694eeaa4730ba5457ff61185b3a55e2e7bea0880aef452a
+pymupdf==1.28.2 --hash=sha256:ebd244918798502d7b4504c90410d1711a4d7675a32584ca30f1bab419ecbffe
+pypdf==6.16.2 --hash=sha256:c8b09a59399062fb45a1b8156c18a787a10a3dae03ac9674397a226712c94604
+pytesseract==0.3.13 --hash=sha256:7a99c6c2ac598360693d83a416e36e0b33a67638bb9d77fdcac094a3589d4b34
+
+# Resolver-selected transitive dependencies
+cffi==2.1.1 --hash=sha256:42f6930c31dc7f50732c9ae793c2786c7b6b044195967bbdde40bb9be81c4cc0
+charset-normalizer==3.5.1 --hash=sha256:f9b1e28d0e8dbfa858abdba91d6b547beaf2df1a59bec6da6faae7b96a4991a9
+cryptography==50.0.0 --hash=sha256:bd1c592e4d5974f0d08d4888e432157adba757c66da0246918e43677fafa2d30
+et_xmlfile==2.0.0 --hash=sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa
+packaging==26.3 --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+pdfminer.six==20260107 --hash=sha256:366585ba97e80dffa8f00cebe303d2f381884d8637af4ce422f1df3ef38111a9
+pycparser==3.0 --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992
+pypdfium2==5.13.0 --hash=sha256:47dcca2a8d507b5fd24f94c3c9d48fb379430f097bc20f01beff6c963ffbcedb
