@@ -4,10 +4,28 @@ qwenpaw-platform-export.zip
 
 # Local credentials and user-specific workspace state
 configs/credentials.yaml
+configs/credentials.*
 configs/PROFILE.md
 configs/MEMORY.md
 configs/chats.json
 configs/jobs.json
+
+# Secret files, private keys, and local credential stores
+secrets/
+**/.secrets/
+**/credentials.local.*
+**/*secret*.local.*
+*.token
+*.secret
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.kdbx
+.netrc
+.npmrc
+.pypirc
 
 # AgentScope/QwenPaw runtime data
 checkpoints/
