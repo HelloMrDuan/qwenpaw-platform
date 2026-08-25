@@ -2,22 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://qwenpaw-platform.local/schemas/extension-manifest.schema.json",
   "title": "QwenPaw Extension Manifest",
-  "description": "Manifest contract for Extension-layer plugins and adapters.",
+  "description": "Manifest contract for Extension-layer plugins, adapters, and skills.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "name",
-    "type",
-    "version",
-    "description",
-    "runtime",
-    "entrypoint",
-    "dependencies",
-    "config_template",
-    "healthcheck",
-    "ports",
-    "required_secrets"
-  ],
+  "required": ["name", "type", "version", "description"],
   "properties": {
     "name": {
       "type": "string",
@@ -25,7 +13,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["plugin", "adapter"]
+      "enum": ["plugin", "adapter", "skill"]
     },
     "version": {
       "type": "string",
@@ -41,6 +29,24 @@
     },
     "entrypoint": {
       "$ref": "#/$defs/relativePath"
+    },
+    "executor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "path", "callable"],
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "enum": ["python", "node"]
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "callable": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        }
+      }
     },
     "dependencies": {
       "type": "array",
@@ -92,13 +98,149 @@
         "pattern": "^[A-Z][A-Z0-9_]*$"
       },
       "uniqueItems": true
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request", "result"],
+      "properties": {
+        "request": { "$ref": "#/$defs/relativePath" },
+        "result": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs", "uri_scheme"],
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactDeclaration" },
+          "minItems": 1
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactDeclaration" },
+          "minItems": 1
+        },
+        "uri_scheme": {
+          "const": "artifact"
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "agent.start",
+          "agent.thinking",
+          "message.delta",
+          "tool.start",
+          "tool.progress",
+          "tool.result",
+          "file.created",
+          "agent.done",
+          "tool.error",
+          "agent.error"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "tests": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relativePath" },
+      "minItems": 1,
+      "uniqueItems": true
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "enum": ["plugin", "adapter"] } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": [
+          "runtime",
+          "entrypoint",
+          "dependencies",
+          "config_template",
+          "healthcheck",
+          "ports",
+          "required_secrets"
+        ],
+        "not": {
+          "anyOf": [
+            { "required": ["executor"] },
+            { "required": ["schemas"] },
+            { "required": ["artifacts"] },
+            { "required": ["events"] },
+            { "required": ["tests"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "skill" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": [
+          "executor",
+          "dependencies",
+          "schemas",
+          "artifacts",
+          "events",
+          "tests"
+        ],
+        "not": {
+          "anyOf": [
+            { "required": ["runtime"] },
+            { "required": ["entrypoint"] },
+            { "required": ["config_template"] },
+            { "required": ["healthcheck"] },
+            { "required": ["ports"] },
+            { "required": ["required_secrets"] }
+          ]
+        }
+      }
+    }
+  ],
   "$defs": {
     "relativePath": {
       "type": "string",
       "minLength": 1,
       "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\.\\.).+"
+    },
+    "artifactDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "mime_types", "required"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["file", "image", "audio", "video"]
+        },
+        "mime_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9!#$&^_.+-]+/(?:[A-Za-z0-9!#$&^_.+-]+|\\*)$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

@@ -26,11 +26,18 @@ class ExtensionRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             {metadata.name for metadata in discovered},
-            {"hermes", "wecom", "wechat-customer", "wechat-mp", "telegram"},
+            {
+                "hermes",
+                "wecom",
+                "wechat-customer",
+                "wechat-mp",
+                "telegram",
+                "pdf-editor",
+            },
         )
         self.assertEqual(len(registry.list(ExtensionType.PLUGIN)), 4)
         self.assertEqual(len(registry.list(ExtensionType.ADAPTER)), 1)
-        self.assertEqual(registry.list(ExtensionType.SKILL), ())
+        self.assertEqual(len(registry.list(ExtensionType.SKILL)), 1)
 
     def test_loader_rejects_manifest_type_that_disagrees_with_directory(self) -> None:
         loader = ExtensionLoader()

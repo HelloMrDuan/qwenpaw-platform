@@ -13,6 +13,7 @@ MANIFEST_PATHS = (
     REPOSITORY_ROOT / "plugins" / "wechat-customer" / "manifest.yaml",
     REPOSITORY_ROOT / "plugins" / "wechat-mp" / "manifest.yaml",
     REPOSITORY_ROOT / "adapters" / "telegram" / "manifest.yaml",
+    REPOSITORY_ROOT / "skills" / "pdf-editor" / "manifest.yaml",
 )
 
 
@@ -34,18 +35,35 @@ class ExtensionManifestValidationTests(unittest.TestCase):
         return document
 
     def test_yaml_format_and_expected_manifest_set(self) -> None:
-        self.assertEqual(len(self.manifests), 5)
+        self.assertEqual(len(self.manifests), 6)
         for path, manifest in self.manifests.items():
             self.assertEqual(path.suffix, ".yaml")
             self.assertIsInstance(manifest, dict)
 
     def test_required_fields_and_no_unknown_fields(self) -> None:
-        required = set(self.schema["required"])
-        allowed = set(self.schema["properties"])
+        common = set(self.schema["required"])
+        runtime_fields = common | {
+            "runtime",
+            "entrypoint",
+            "dependencies",
+            "config_template",
+            "healthcheck",
+            "ports",
+            "required_secrets",
+        }
+        skill_fields = common | {
+            "executor",
+            "dependencies",
+            "schemas",
+            "artifacts",
+            "events",
+            "tests",
+        }
         for path, manifest in self.manifests.items():
             with self.subTest(path=path):
+                required = skill_fields if manifest["type"] == "skill" else runtime_fields
                 self.assertEqual(required - set(manifest), set())
-                self.assertEqual(set(manifest) - allowed, set())
+                self.assertEqual(set(manifest) - required, set())
                 self.assertTrue(manifest["description"].strip())
                 self.assertRegex(
                     manifest["name"],
@@ -59,12 +77,21 @@ class ExtensionManifestValidationTests(unittest.TestCase):
     def test_type_runtime_and_directory_are_consistent(self) -> None:
         allowed_types = set(self.schema["properties"]["type"]["enum"])
         allowed_runtimes = set(self.schema["properties"]["runtime"]["enum"])
-        expected_parent_for_type = {"plugin": "plugins", "adapter": "adapters"}
+        expected_parent_for_type = {
+            "plugin": "plugins",
+            "adapter": "adapters",
+            "skill": "skills",
+        }
 
         for path, manifest in self.manifests.items():
             with self.subTest(path=path):
                 self.assertIn(manifest["type"], allowed_types)
-                self.assertIn(manifest["runtime"], allowed_runtimes)
+                runtime = (
+                    manifest["executor"]["runtime"]
+                    if manifest["type"] == "skill"
+                    else manifest["runtime"]
+                )
+                self.assertIn(runtime, allowed_runtimes)
                 self.assertEqual(path.parent.name, manifest["name"])
                 self.assertEqual(
                     path.parent.parent.name,
@@ -74,6 +101,17 @@ class ExtensionManifestValidationTests(unittest.TestCase):
     def test_declared_paths_exist_and_cannot_escape_extension(self) -> None:
         for path, manifest in self.manifests.items():
             with self.subTest(path=path):
+                if manifest["type"] == "skill":
+                    self._assert_relative_existing_path(
+                        path.parent,
+                        manifest["executor"]["path"],
+                    )
+                    for schema_path in manifest["schemas"].values():
+                        self._assert_relative_existing_path(path.parent, schema_path)
+                    for test_path in manifest["tests"]:
+                        self._assert_relative_existing_path(path.parent, test_path)
+                    continue
+
                 self._assert_relative_existing_path(path.parent, manifest["entrypoint"])
 
                 config_template = manifest["config_template"]
@@ -96,6 +134,9 @@ class ExtensionManifestValidationTests(unittest.TestCase):
                 self.assertEqual(len(manifest["dependencies"]), len(set(manifest["dependencies"])))
                 self.assertTrue(all(item.strip() for item in manifest["dependencies"]))
 
+                if manifest["type"] == "skill":
+                    continue
+
                 ports = manifest["ports"]
                 self.assertEqual(len(ports), len(set(ports)))
                 self.assertTrue(all(type(port) is int and 1 <= port <= 65535 for port in ports))
@@ -116,11 +157,14 @@ class ExtensionManifestValidationTests(unittest.TestCase):
     def test_schema_defines_all_requested_contract_fields(self) -> None:
         self.assertEqual(
             set(self.schema["required"]),
+            {"name", "type", "version", "description"},
+        )
+        self.assertEqual(
+            set(self.schema["properties"]["type"]["enum"]),
+            {"plugin", "adapter", "skill"},
+        )
+        self.assertTrue(
             {
-                "name",
-                "type",
-                "version",
-                "description",
                 "runtime",
                 "entrypoint",
                 "dependencies",
@@ -128,8 +172,14 @@ class ExtensionManifestValidationTests(unittest.TestCase):
                 "healthcheck",
                 "ports",
                 "required_secrets",
-            },
+                "executor",
+                "schemas",
+                "artifacts",
+                "events",
+                "tests",
+            }.issubset(self.schema["properties"])
         )
+        self.assertEqual(len(self.schema["allOf"]), 2)
         self.assertFalse(self.schema["additionalProperties"])
 
     def _assert_relative_existing_path(self, extension_root: Path, value: str) -> None:

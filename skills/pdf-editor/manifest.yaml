@@ -1,0 +1,57 @@
+{
+  "name": "pdf-editor",
+  "type": "skill",
+  "version": "1.2.0",
+  "description": "Deterministic PDF editing with contract-based Artifact output and StreamEvent reporting.",
+  "executor": {
+    "runtime": "python",
+    "path": "executor/main.py",
+    "callable": "execute"
+  },
+  "dependencies": [
+    "Python >=3.11,<3.13",
+    "pymupdf==1.28.2",
+    "pillow==12.3.0"
+  ],
+  "schemas": {
+    "request": "schemas/request.schema.json",
+    "result": "schemas/result.schema.json"
+  },
+  "artifacts": {
+    "inputs": [
+      {
+        "name": "source_pdf",
+        "kind": "file",
+        "mime_types": ["application/pdf"],
+        "required": true
+      },
+      {
+        "name": "operation_asset",
+        "kind": "file",
+        "mime_types": ["application/pdf", "image/*"],
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "name": "edited_pdf",
+        "kind": "file",
+        "mime_types": ["application/pdf"],
+        "required": true
+      }
+    ],
+    "uri_scheme": "artifact"
+  },
+  "events": [
+    "tool.start",
+    "tool.progress",
+    "file.created",
+    "tool.result",
+    "tool.error"
+  ],
+  "tests": [
+    "tests/test_contract.py",
+    "tests/test_regression.py",
+    "tests/test_visual_acceptance.py"
+  ]
+}

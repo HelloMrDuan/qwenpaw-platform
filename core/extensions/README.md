@@ -29,13 +29,15 @@ plugins = registry.list("plugin")
 
 `discover()` 默认兼容历史目录：没有 `manifest.yaml` 的目录会跳过。使用 `discover(strict=True)` 可执行完整性审计并报告缺失 Manifest。
 
-当前 Phase 5.2 Schema 只允许 `plugin` 和 `adapter`。Registry 已扫描 `skills/`，但现有 Skill 尚未拥有标准 `manifest.yaml`，因此不会被注册；`skill.yaml` 不会被隐式转换。
+当前 Schema 支持 `plugin`、`adapter` 和 `skill`。PDF Editor 是首个拥有标准 `manifest.yaml` 的 Skill；其现有 `skill.yaml` 继续保留，Registry 不会隐式转换其他历史 Skill。
+
+Skill 的 `executor.runtime`/`executor.path` 会投影为统一 Metadata 的 `runtime`/`entrypoint`，并保留 `schemas`、`artifacts`、`events` 和 `tests`。该投影仍然只是静态数据。
 
 ## 安全边界
 
 本模块不会：
 
-- import `entrypoint`；
+- import `entrypoint` 或 Skill `executor`；
 - 启动 Python、Node、shell 或容器进程；
 - 连接 AgentScope/QwenPaw Runtime；
 - 读取配置文件内容或 secret 值；

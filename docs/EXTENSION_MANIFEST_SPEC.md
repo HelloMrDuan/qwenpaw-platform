@@ -1,14 +1,15 @@
 # Extension Manifest Specification
 
-状态：Phase 5.2 基线。本文定义 Extension 仓库中的 Plugin/Adapter 描述协议，不是 QwenPaw Runtime 的安装器实现。
+状态：Phase 5.4 基线。本文定义 Extension 仓库中的 Plugin、Adapter 和 Skill 描述协议，不是 QwenPaw Runtime 的安装器实现。
 
 ## 1. 文件位置与解析规则
 
-每个 Plugin 或 Adapter 根目录必须包含 `manifest.yaml`：
+每个已标准化扩展的根目录必须包含 `manifest.yaml`：
 
 ```text
 plugins/<name>/manifest.yaml
 adapters/<name>/manifest.yaml
+skills/<name>/manifest.yaml
 ```
 
 Schema 位于 `schemas/extension-manifest.schema.json`。路径字段相对包含 Manifest 的扩展根目录解析，禁止绝对路径和 `..` 路径逃逸。
@@ -20,7 +21,7 @@ Schema 位于 `schemas/extension-manifest.schema.json`。路径字段相对包�
 | 字段 | 类型 | 约束与语义 |
 | --- | --- | --- |
 | `name` | string | 小写 kebab-case；应与扩展目录名一致 |
-| `type` | string | 只能为 `plugin` 或 `adapter`；并须与父目录类型一致 |
+| `type` | string | 只能为 `plugin`、`adapter` 或 `skill`；并须与父目录类型一致 |
 | `version` | string | Extension 包版本，采用 SemVer；`-recovered` 表示恢复基线，不等于上游源码版本 |
 | `description` | string | 当前能力、来源状态和边界的简述 |
 | `runtime` | string | 主入口运行时，只能为 `python` 或 `node` |
@@ -30,6 +31,18 @@ Schema 位于 `schemas/extension-manifest.schema.json`。路径字段相对包�
 | `healthcheck` | object/null | 标准健康检查；对象含 `type` (`http`/`command`) 与 `target`；`null` 表示尚未标准化 |
 | `ports` | integer[] | 扩展监听端口；无监听或无法确认时为空列表，不记录第三方远端端口 |
 | `required_secrets` | string[] | 启动时无条件需要的 secret 标识符；只记录名称，严禁记录值 |
+
+`runtime`、`entrypoint`、`config_template`、`healthcheck`、`ports` 和 `required_secrets` 属于 Plugin/Adapter 常驻或连接型生命周期。Skill 使用以下专属字段：
+
+| 字段 | 类型 | 约束与语义 |
+| --- | --- | --- |
+| `executor` | object | `runtime`、相对 `path` 与 `callable`；只描述，不执行 |
+| `schemas` | object | 必需的 `request`/`result` Schema 相对路径 |
+| `artifacts` | object | 输入/输出 Artifact 声明与固定 `artifact` URI scheme |
+| `events` | string[] | Skill 可能产生的标准 StreamEvent 子集 |
+| `tests` | relative path[] | 发布范围内现存的离线测试文件 |
+
+三类扩展都声明 `dependencies`。Skill 不声明端口、secret 或健康检查；其执行器信息由 `executor` 表达。详见 `docs/SKILL_EXTENSION_MODEL.md`。
 
 `required_secrets` 为空不表示扩展永远不需要凭证。例如 Hermes 支持多个模型 Provider，没有单一、无条件必需的 secret，具体 Provider 的 secret 由配置阶段决定。
 
@@ -60,7 +73,7 @@ Schema 位于 `schemas/extension-manifest.schema.json`。路径字段相对包�
 ### start
 
 1. 确认安装版本、配置和依赖校验均通过。
-2. 由部署包装层按 `runtime` 启动 `entrypoint`。
+2. Plugin/Adapter 由部署包装层按 `runtime` 启动 `entrypoint`；Skill 由未来 Tool Router 按 Contract 调用 `executor`。
 3. Manifest 本身不得 import、执行或修改恢复源码。
 4. 当前五个 `-recovered` 版本仅供描述和审计，不能据此直接判定可启动。
 
@@ -86,4 +99,4 @@ Schema 位于 `schemas/extension-manifest.schema.json`。路径字段相对包�
 
 ## 5. Runtime 边界
 
-Manifest 是 Extension 仓库的静态发布元数据。它不替代 AgentScope/QwenPaw Runtime 的扩展发现、进程管理、Channel 注册、消息协议或 Streaming 实现。Runtime 接入前仍须完成适配包装、配置模板、依赖锁、staging 验收和正式发布审批。
+Manifest 是 Extension 仓库的静态发布元数据。它不替代 AgentScope/QwenPaw Runtime 的扩展发现、进程管理、Skill 调用、Channel 注册、消息协议或 Streaming 实现。Runtime 接入前仍须完成适配包装、配置模板、依赖锁、staging 验收和正式发布审批。
