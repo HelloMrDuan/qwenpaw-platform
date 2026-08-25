@@ -12,6 +12,7 @@ from core.extensions import ExtensionType
 
 
 AGENTSCOPE_INSTALL_PLAN_VERSION = "qwenpaw-agentscope-install-plan.v1"
+AGENTSCOPE_ROLLBACK_PLAN_VERSION = "qwenpaw-agentscope-rollback-plan.v1"
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -236,6 +237,104 @@ class InstallPlan:
             "plan_id": self.plan_id,
             "ready": self.ready,
             "package": self.package.to_dict(),
+            "mapping": self.mapping.to_dict(),
+            "secrets": self.secrets.to_dict(),
+            "steps": [step.to_dict() for step in self.steps],
+        }
+
+
+class RollbackAction(str, Enum):
+    VERIFY_ROLLBACK_PACKAGE = "verify_rollback_package"
+    CHECK_SECRETS = "check_secrets"
+    PRESERVE_CURRENT_TARGET = "preserve_current_target"
+    RESTORE_PAYLOAD = "restore_payload"
+    VERIFY_WORKSPACE = "verify_workspace"
+
+
+@dataclass(frozen=True, slots=True)
+class RollbackPlanStep:
+    order: int
+    action: RollbackAction
+    target: str
+    blocking: bool = True
+
+    def __post_init__(self) -> None:
+        if type(self.order) is not int or self.order < 1:
+            raise ValueError("rollback step order must be a positive integer")
+        if isinstance(self.action, str):
+            object.__setattr__(self, "action", RollbackAction(self.action))
+        if not isinstance(self.action, RollbackAction):
+            raise TypeError("action must be a RollbackAction")
+        object.__setattr__(self, "target", _require_text(self.target, "target"))
+        if not isinstance(self.blocking, bool):
+            raise TypeError("blocking must be a boolean")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "order": self.order,
+            "action": self.action.value,
+            "target": self.target,
+            "blocking": self.blocking,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class RollbackPlan:
+    plan_id: str
+    current_package: ExtensionPackageDescriptor
+    rollback_package: ExtensionPackageDescriptor
+    mapping: WorkspaceMapping
+    secrets: SecretRequirementCheck
+    steps: Sequence[RollbackPlanStep]
+    schema_version: str = AGENTSCOPE_ROLLBACK_PLAN_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != AGENTSCOPE_ROLLBACK_PLAN_VERSION:
+            raise ValueError("unsupported AgentScope Rollback Plan version")
+        object.__setattr__(self, "plan_id", _require_text(self.plan_id, "plan_id"))
+        for field_name in ("current_package", "rollback_package"):
+            if not isinstance(getattr(self, field_name), ExtensionPackageDescriptor):
+                raise TypeError(
+                    f"{field_name} must be an ExtensionPackageDescriptor"
+                )
+        if (
+            self.current_package.name != self.rollback_package.name
+            or self.current_package.type is not self.rollback_package.type
+        ):
+            raise ValueError("rollback packages must describe one Extension identity")
+        if self.current_package.version == self.rollback_package.version:
+            raise ValueError("rollback package must use a different version")
+        if not isinstance(self.mapping, WorkspaceMapping):
+            raise TypeError("mapping must be a WorkspaceMapping")
+        if (
+            self.mapping.extension_name != self.rollback_package.name
+            or self.mapping.extension_type is not self.rollback_package.type
+        ):
+            raise ValueError("rollback package and Workspace mapping must match")
+        if not isinstance(self.secrets, SecretRequirementCheck):
+            raise TypeError("secrets must be a SecretRequirementCheck")
+        if tuple(self.secrets.required) != tuple(self.rollback_package.required_secrets):
+            raise ValueError("secret check must describe the rollback package")
+        if isinstance(self.steps, (str, bytes)):
+            raise TypeError("steps must be a sequence of RollbackPlanStep objects")
+        steps = tuple(self.steps)
+        if not steps or not all(isinstance(item, RollbackPlanStep) for item in steps):
+            raise ValueError("steps must contain RollbackPlanStep objects")
+        if tuple(item.order for item in steps) != tuple(range(1, len(steps) + 1)):
+            raise ValueError("rollback steps must use contiguous order starting at one")
+        object.__setattr__(self, "steps", steps)
+
+    @property
+    def ready(self) -> bool:
+        return self.secrets.satisfied
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "plan_id": self.plan_id,
+            "ready": self.ready,
+            "current_package": self.current_package.to_dict(),
+            "rollback_package": self.rollback_package.to_dict(),
             "mapping": self.mapping.to_dict(),
             "secrets": self.secrets.to_dict(),
             "steps": [step.to_dict() for step in self.steps],

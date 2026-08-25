@@ -16,6 +16,9 @@ from .models import (
     InstallAction,
     InstallPlan,
     InstallPlanStep,
+    RollbackAction,
+    RollbackPlan,
+    RollbackPlanStep,
     SecretRequirementCheck,
 )
 from .workspace_mapper import WorkspaceMapper
@@ -129,6 +132,82 @@ class AgentScopeDeploymentAdapter:
         return InstallPlan(
             plan_id=plan_id,
             package=package,
+            mapping=mapping,
+            secrets=secrets,
+            steps=steps,
+        )
+
+    def create_rollback_plan(
+        self,
+        current_archive: str | Path,
+        rollback_archive: str | Path,
+        workspace_root: str | Path,
+        *,
+        available_secrets: Iterable[str] = (),
+        expected_current_sha256: str | None = None,
+        expected_rollback_sha256: str | None = None,
+    ) -> RollbackPlan:
+        current = self.parse_package(
+            current_archive,
+            expected_sha256=expected_current_sha256,
+        )
+        rollback = self.parse_package(
+            rollback_archive,
+            expected_sha256=expected_rollback_sha256,
+        )
+        if current.name != rollback.name or current.type is not rollback.type:
+            raise AgentScopeDeploymentBridgeError(
+                "rollback packages must describe one Extension identity"
+            )
+        if current.version == rollback.version:
+            raise AgentScopeDeploymentBridgeError(
+                "rollback package must use a different version"
+            )
+        mapping = self.workspace_mapper.map_package(rollback, workspace_root)
+        secrets = self.check_secrets(rollback, available_secrets)
+        identity = "|".join(
+            (
+                current.sha256,
+                rollback.sha256,
+                str(mapping.workspace_root),
+                mapping.relative_target,
+            )
+        )
+        plan_id = (
+            "rollback_"
+            + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
+        )
+        steps = (
+            RollbackPlanStep(
+                1,
+                RollbackAction.VERIFY_ROLLBACK_PACKAGE,
+                str(rollback.archive),
+            ),
+            RollbackPlanStep(
+                2,
+                RollbackAction.CHECK_SECRETS,
+                f"secret-requirements://{rollback.name}/{rollback.version}",
+            ),
+            RollbackPlanStep(
+                3,
+                RollbackAction.PRESERVE_CURRENT_TARGET,
+                str(mapping.target_directory),
+            ),
+            RollbackPlanStep(
+                4,
+                RollbackAction.RESTORE_PAYLOAD,
+                str(mapping.target_directory),
+            ),
+            RollbackPlanStep(
+                5,
+                RollbackAction.VERIFY_WORKSPACE,
+                str(mapping.target_directory),
+            ),
+        )
+        return RollbackPlan(
+            plan_id=plan_id,
+            current_package=current,
+            rollback_package=rollback,
             mapping=mapping,
             secrets=secrets,
             steps=steps,

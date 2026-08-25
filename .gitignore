@@ -51,6 +51,7 @@ dist/extensions/
 
 # Local offline Extension deployment simulation
 workspace/extensions/
+install-report.json
 
 # Local sanitized PDF acceptance fixtures (structure only in Git)
 tests/fixtures/pdf-editor/simple/*
