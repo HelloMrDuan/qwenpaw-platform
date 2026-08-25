@@ -5,6 +5,19 @@ from .executor_bridge import (
     ExtensionExecutorBridge,
     UnsupportedSkillExecutor,
 )
+from .context import (
+    EXTENSION_RUNTIME_CONTEXT_VERSION,
+    ExtensionRuntimeContext,
+)
+from .gateway import (
+    ExtensionGatewayOperation,
+    ExtensionGatewayResult,
+    ExtensionMessageReceiver,
+    ExtensionNotAvailableError,
+    ExtensionRuntimeGateway,
+    ExtensionRuntimeGatewayError,
+    PluginInvocationFacade,
+)
 from .models import (
     ArtifactPublisher,
     ArtifactResolver,
@@ -25,14 +38,23 @@ from .skill_invoker import SkillInvocationError, SkillInvoker
 __all__ = [
     "ArtifactPublisher",
     "ArtifactResolver",
+    "EXTENSION_RUNTIME_CONTEXT_VERSION",
     "ExecutorLoadError",
+    "ExtensionGatewayOperation",
+    "ExtensionGatewayResult",
+    "ExtensionMessageReceiver",
+    "ExtensionNotAvailableError",
     "ExtensionExecutorBridge",
+    "ExtensionRuntimeContext",
+    "ExtensionRuntimeGateway",
+    "ExtensionRuntimeGatewayError",
     "ExternalServiceProbe",
     "ExternalServiceSnapshot",
     "ExternalServiceState",
     "PluginRuntimeBridge",
     "PluginRuntimeBridgeError",
     "PluginRuntimeDescriptor",
+    "PluginInvocationFacade",
     "SkillExecutorDescriptor",
     "SkillInvocationError",
     "SkillInvoker",
