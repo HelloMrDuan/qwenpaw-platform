@@ -7,7 +7,8 @@ Extension model and the QwenPaw v2.1 official Plugin contract. It does not
 replace AgentScope/QwenPaw Runtime, implement a provider Channel, or change any
 recovered business component.
 
-The first facade targets the existing Telegram Adapter:
+The first adapter set targets the existing Telegram, WeCom, and WeChat
+Customer Adapters:
 
 ```text
 QwenPaw Plugin package
@@ -25,8 +26,9 @@ ExtensionRuntimeGateway -------- adapters/telegram/runtime.py
         +---- Lifecycle/Health synchronization
 ```
 
-The recovered `telegram_bridge.py` and `telegram_bridge_main.py` remain the
-provider implementation. The official facade neither imports nor copies them.
+The recovered Telegram Bridge, WeCom Node Bridge, and WeChat Customer Gateway
+remain the provider implementations. The official facades neither import nor
+copy them.
 
 ## 2. Manifest mapping
 
@@ -70,18 +72,24 @@ with the checked-in Telegram `plugin.json` by the offline contract test.
 It does not import QwenPaw, start a process, perform network access, or read
 secret values.
 
-### Telegram Plugin entry
+### Channel Plugin entries
 
-`plugins/telegram-channel-plugin/plugin.py` constructs the existing
-`TelegramRuntimeAdapter`, `PluginRuntimeBridge`, and `ExtensionRuntimeGateway`
-around dependencies supplied by the host or test harness. Telegram parsing,
-session mapping, response conversion, health probing, and delivery receipts
-stay in the existing Adapter.
+Each Channel Plugin entry constructs its existing Runtime Adapter,
+`PluginRuntimeBridge`, and `ExtensionRuntimeGateway` around dependencies
+supplied by the host or test harness. Provider parsing, session mapping,
+response conversion, health probing, and delivery receipts stay in the
+existing Adapter.
+
+| Official facade | Existing Adapter | Historical implementation retained |
+| --- | --- | --- |
+| `telegram-channel-plugin` | `adapters/telegram/runtime.py` | Telegram Bridge |
+| `wecom-channel-plugin` | `adapters/wecom/runtime.py` | `wecom_bridge.mjs` |
+| `wechat-customer-channel-plugin` | `adapters/wechat_customer/runtime.py` | `wecom_kf_gateway_v345.py` |
 
 The official `register(api)` entry currently registers a process-safe startup
 hook that validates Extension metadata. Live `api.register_channel(...)`
 activation is intentionally deferred until a supervised Telegram transport and
-a tenant-version-compatible QwenPaw Channel facade are available. This phase
+a tenant-version-compatible QwenPaw Channel facade is available. This phase
 therefore proves the packaging and delegation contract, not external service
 connectivity.
 

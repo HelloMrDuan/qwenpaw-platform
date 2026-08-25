@@ -1,0 +1,73 @@
+{
+  "id": "wechat-customer-extension-channel",
+  "name": "WeChat Customer Extension Channel",
+  "version": "0.1.0-recovered",
+  "type": "channel",
+  "description": "Official QwenPaw Plugin facade for the recovered WeChat Customer Extension Adapter.",
+  "author": "qwenpaw-platform",
+  "entry": {
+    "backend": "plugin.py"
+  },
+  "dependencies": [],
+  "qwenpaw_version": {
+    "min": "2.1.0",
+    "max": "2.2.0"
+  },
+  "meta": {
+    "extension": {
+      "name": "wechat-customer",
+      "type": "plugin",
+      "manifest": "plugins/wechat-customer/manifest.yaml",
+      "runtime": "python",
+      "declared_entrypoint": "recovered/wecom_kf_gateway_v345.py",
+      "adapter_entrypoint": "adapters/wechat_customer/runtime.py"
+    },
+    "permissions": [
+      "extension.registry.read",
+      "extension.runtime.gateway",
+      "channel.wechat-customer.transport"
+    ],
+    "config": {
+      "fields": [
+        {
+          "name": "CORP_ID",
+          "type": "password",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "APP_SECRET",
+          "type": "password",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "TOKEN",
+          "type": "password",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "AESKEY",
+          "type": "password",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "OPEN_KFID",
+          "type": "password",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "values": {}
+    },
+    "required_secrets": [
+      "CORP_ID",
+      "APP_SECRET",
+      "TOKEN",
+      "AESKEY",
+      "OPEN_KFID"
+    ]
+  }
+}

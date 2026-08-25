@@ -1,0 +1,59 @@
+{
+  "id": "wecom-extension-channel",
+  "name": "WeCom Extension Channel",
+  "version": "0.1.0-recovered",
+  "type": "channel",
+  "description": "Official QwenPaw Plugin facade for the recovered WeCom Extension Adapter.",
+  "author": "qwenpaw-platform",
+  "entry": {
+    "backend": "plugin.py"
+  },
+  "dependencies": [],
+  "qwenpaw_version": {
+    "min": "2.1.0",
+    "max": "2.2.0"
+  },
+  "meta": {
+    "extension": {
+      "name": "wecom",
+      "type": "plugin",
+      "manifest": "plugins/wecom/manifest.yaml",
+      "runtime": "node",
+      "declared_entrypoint": "recovered/wecom-node/wecom_bridge.mjs",
+      "adapter_entrypoint": "adapters/wecom/runtime.py"
+    },
+    "permissions": [
+      "extension.registry.read",
+      "extension.runtime.gateway",
+      "channel.wecom.transport"
+    ],
+    "config": {
+      "fields": [
+        {
+          "name": "WECOM_BOT_ID",
+          "type": "password",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "WECOM_BOT_SECRET",
+          "type": "password",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "SN_API_KEY",
+          "type": "password",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "values": {}
+    },
+    "required_secrets": [
+      "WECOM_BOT_ID",
+      "WECOM_BOT_SECRET",
+      "SN_API_KEY"
+    ]
+  }
+}
