@@ -45,6 +45,12 @@ ALLOWED_EXTERNAL_EXTENSIONS = {
         runtime=ExtensionRuntime.NODE,
         entrypoint="recovered/wecom-node/wecom_bridge.mjs",
     ),
+    "wechat-customer": _AllowedExternalExtension(
+        source_root="plugins",
+        type=ExtensionType.PLUGIN,
+        runtime=ExtensionRuntime.PYTHON,
+        entrypoint="recovered/wecom_kf_gateway_v345.py",
+    ),
 }
 
 
