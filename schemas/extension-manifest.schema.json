@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qwenpaw-platform.local/schemas/extension-manifest.schema.json",
+  "title": "QwenPaw Extension Manifest",
+  "description": "Manifest contract for Extension-layer plugins and adapters.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "type",
+    "version",
+    "description",
+    "runtime",
+    "entrypoint",
+    "dependencies",
+    "config_template",
+    "healthcheck",
+    "ports",
+    "required_secrets"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["plugin", "adapter"]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["python", "node"]
+    },
+    "entrypoint": {
+      "$ref": "#/$defs/relativePath"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "config_template": {
+      "oneOf": [
+        { "$ref": "#/$defs/relativePath" },
+        { "type": "null" }
+      ]
+    },
+    "healthcheck": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["http", "command"]
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "ports": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
+      },
+      "uniqueItems": true
+    },
+    "required_secrets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]*$"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\.\\.).+"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "hermes",
+  "type": "plugin",
+  "version": "0.1.0-recovered",
+  "description": "Recovered Hermes 0.20.1 source baseline; not registered with QwenPaw Runtime.",
+  "runtime": "python",
+  "entrypoint": "recovered/hermes-agent-main/gateway/run.py",
+  "dependencies": [
+    "Python 3.11",
+    "Node.js 26 (optional web/desktop workspace)",
+    "uv (Python installation metadata was not recovered)",
+    "ripgrep",
+    "ffmpeg"
+  ],
+  "config_template": "recovered/hermes-agent-main/.env.example",
+  "healthcheck": null,
+  "ports": [],
+  "required_secrets": []
+}

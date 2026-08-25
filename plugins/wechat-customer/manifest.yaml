@@ -1,0 +1,28 @@
+{
+  "name": "wechat-customer",
+  "type": "plugin",
+  "version": "0.1.0-recovered",
+  "description": "Recovered WeCom customer-service gateway V3.4.5 baseline; historical state and Runtime wiring are excluded.",
+  "runtime": "python",
+  "entrypoint": "recovered/wecom_kf_gateway_v345.py",
+  "dependencies": [
+    "Python 3 (exact version not recovered)",
+    "pycryptodome",
+    "Pillow",
+    "SQLite",
+    "QwenPaw CLI and sn_agent_runner.py (not recovered)"
+  ],
+  "config_template": null,
+  "healthcheck": {
+    "type": "http",
+    "target": "http://127.0.0.1:8798/healthz"
+  },
+  "ports": [8798],
+  "required_secrets": [
+    "CORP_ID",
+    "APP_SECRET",
+    "TOKEN",
+    "AESKEY",
+    "OPEN_KFID"
+  ]
+}

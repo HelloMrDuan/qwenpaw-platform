@@ -1,0 +1,18 @@
+{
+  "name": "wechat-mp",
+  "type": "plugin",
+  "version": "0.1.0-recovered",
+  "description": "Recovered WeChat Official Account gateway baseline; the production version and Runtime wiring are not yet confirmed.",
+  "runtime": "python",
+  "entrypoint": "recovered/wechat_mp_gateway.py",
+  "dependencies": [
+    "Python 3 (exact version not recovered)",
+    "QwenPaw CLI (external runtime dependency)"
+  ],
+  "config_template": null,
+  "healthcheck": null,
+  "ports": [8799],
+  "required_secrets": [
+    "TOKEN"
+  ]
+}

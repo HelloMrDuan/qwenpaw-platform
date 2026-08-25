@@ -1,0 +1,19 @@
+{
+  "name": "telegram",
+  "type": "adapter",
+  "version": "0.1.0-recovered",
+  "description": "Recovered Telegram Bot HTTP bridge; Extension Contract wrapping and Runtime registration are not implemented.",
+  "runtime": "python",
+  "entrypoint": "recovered/telegram_bridge_main.py",
+  "dependencies": [
+    "Python 3 standard library (exact version not recovered)",
+    "POSIX shell for the legacy launcher",
+    "Hermes run_image_and_reply.sh and downstream agent runner"
+  ],
+  "config_template": null,
+  "healthcheck": null,
+  "ports": [],
+  "required_secrets": [
+    "TELEGRAM_BOT_TOKEN"
+  ]
+}

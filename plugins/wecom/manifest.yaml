@@ -1,0 +1,21 @@
+{
+  "name": "wecom",
+  "type": "plugin",
+  "version": "0.1.0-recovered",
+  "description": "Recovered enterprise WeCom bridge source; dependency versions and Runtime registration remain incomplete.",
+  "runtime": "node",
+  "entrypoint": "recovered/wecom-node/wecom_bridge.mjs",
+  "dependencies": [
+    "Node.js >=18 (exact version not recovered)",
+    "@wecom/aibot-node-sdk (exact version not recovered)",
+    "Hermes launcher and sn_agent_runner.py (not recovered)"
+  ],
+  "config_template": null,
+  "healthcheck": null,
+  "ports": [],
+  "required_secrets": [
+    "WECOM_BOT_ID",
+    "WECOM_BOT_SECRET",
+    "SN_API_KEY"
+  ]
+}
