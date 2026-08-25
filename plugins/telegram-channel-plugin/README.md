@@ -25,6 +25,8 @@ Bot Token, or register a live Telegram Channel instance.
 The `TELEGRAM_BOT_TOKEN` entry in `plugin.json` is a required secret **name** and
 UI field declaration only. No value belongs in the archive.
 
-Before a tenant upload, the release builder must assemble the wrapper and the
-required `qwenpaw-platform` modules into one self-contained official Plugin ZIP,
-then validate it against the exact QwenPaw tenant version.
+Phase 12.6 uses `scripts/build_extension.py --qwenpaw-plugin
+telegram-channel-plugin` to assemble the wrapper, Adapter, contracts, internal
+Manifest, and Runtime dependency closure into a self-contained official Plugin
+ZIP. Tenant installation and a QwenPaw `BaseChannel` facade remain separate
+validation steps.

@@ -2,37 +2,54 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 from pathlib import Path
 import sys
 from typing import Any, Callable
 
-from adapters.wechat_customer.runtime import WeChatCustomerRuntimeAdapter
-from core.contracts import DeliveryReceipt, MessageEvent
-from core.extensions.lifecycle import ExtensionLifecycleManager
-from core.extensions.runtime import ExtensionRuntimeGateway, PluginRuntimeBridge
-from core.streaming import StreamingBridge
-
-
 PLUGIN_ROOT = Path(__file__).resolve().parent
-REPOSITORY_ROOT = PLUGIN_ROOT.parents[1]
-WRAPPER_MODULE_PATH = REPOSITORY_ROOT / "plugins" / "runtime-wrapper" / "runtime.py"
+SOURCE_REPOSITORY_ROOT = PLUGIN_ROOT.parents[1]
+PACKAGED_ADAPTER_PATH = PLUGIN_ROOT / "adapter" / "wechat_customer" / "runtime.py"
+PACKAGED_WRAPPER_PATH = PLUGIN_ROOT / "runtime" / "wrapper.py"
+SELF_CONTAINED = PACKAGED_ADAPTER_PATH.is_file() and PACKAGED_WRAPPER_PATH.is_file()
 
 
-def _load_wrapper_class():
+def _load_source_wrapper_class():
+    wrapper_path = (
+        SOURCE_REPOSITORY_ROOT / "plugins" / "runtime-wrapper" / "runtime.py"
+    )
     spec = importlib.util.spec_from_file_location(
         "qwenpaw_platform_official_plugin_runtime",
-        WRAPPER_MODULE_PATH,
+        wrapper_path,
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load Runtime wrapper: {WRAPPER_MODULE_PATH}")
+        raise RuntimeError(f"cannot load Runtime wrapper: {wrapper_path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module.OfficialPluginRuntimeWrapper
 
 
-OfficialPluginRuntimeWrapper = _load_wrapper_class()
+if SELF_CONTAINED:
+    REPOSITORY_ROOT = PLUGIN_ROOT
+    if str(PLUGIN_ROOT) not in sys.path:
+        sys.path.insert(0, str(PLUGIN_ROOT))
+    from adapter.wechat_customer.runtime import WeChatCustomerRuntimeAdapter
+    from runtime.wrapper import OfficialPluginRuntimeWrapper
+else:
+    REPOSITORY_ROOT = SOURCE_REPOSITORY_ROOT
+    if str(REPOSITORY_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPOSITORY_ROOT))
+    WeChatCustomerRuntimeAdapter = importlib.import_module(
+        "adapters.wechat_customer.runtime"
+    ).WeChatCustomerRuntimeAdapter
+    OfficialPluginRuntimeWrapper = _load_source_wrapper_class()
+
+from core.contracts import DeliveryReceipt, MessageEvent
+from core.extensions.lifecycle import ExtensionLifecycleManager
+from core.extensions.runtime import ExtensionRuntimeGateway, PluginRuntimeBridge
+from core.streaming import StreamingBridge
 
 
 class WeChatCustomerChannelPlugin:

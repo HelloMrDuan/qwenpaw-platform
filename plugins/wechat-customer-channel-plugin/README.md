@@ -14,6 +14,7 @@ import, copy, start, or modify `wecom_kf_gateway_v345.py`.
   using host-injected dependencies.
 - `plugin.json` declares secret names only and contains no values.
 
-Phase 12.x validates this source-level facade offline. A self-contained official
-Plugin ZIP and tenant-compatible `BaseChannel` facade are still required before
-live QwenPaw Channel registration.
+Phase 12.6 uses `scripts/build_extension.py --qwenpaw-plugin
+wechat-customer-channel-plugin` to generate a self-contained official Plugin
+ZIP. A tenant-compatible `BaseChannel` facade and real QwenPaw installation
+validation are still required before live Channel registration.

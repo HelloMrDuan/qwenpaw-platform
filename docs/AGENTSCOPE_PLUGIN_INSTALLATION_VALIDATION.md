@@ -1,5 +1,10 @@
 # AgentScope/QwenPaw Plugin Installation Validation
 
+> Historical Phase 12.5 record. Its three-file candidate ZIPs were superseded
+> by the self-contained Phase 12.6 packages documented in
+> `docs/PLUGIN_SELF_CONTAINED_MODEL.md`; the hashes below remain the evidence for
+> the earlier failed candidates.
+
 ## 1. Validation scope
 
 - Date: 2026-08-25

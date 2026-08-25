@@ -145,10 +145,11 @@ Phase 12 is accepted when:
 6. historical Telegram source hashes remain unchanged;
 7. all repository tests pass offline.
 
-A later packaging phase is required before tenant upload: it must build a
-self-contained official Plugin ZIP and validate the concrete QwenPaw
-`PluginApi`/Channel API for the target tenant without changing recovered
-Telegram business logic.
+Phase 12.6 now builds self-contained official Plugin ZIPs containing the
+existing Adapter, generic wrapper, contracts, core dependency closure, and
+internal Manifest. Tenant upload still requires validation of the concrete
+QwenPaw `PluginApi`/Channel API without changing recovered provider business
+logic. See `docs/PLUGIN_SELF_CONTAINED_MODEL.md`.
 
 ## 7. Official references
 

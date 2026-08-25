@@ -14,6 +14,7 @@ historical `wecom_bridge.mjs` or `bot.mjs` implementation.
 - Provider credentials are declared by name only; values are not stored here.
 - The Node process remains externally supervised and owns provider I/O.
 
-Phase 12.x validates this source-level facade offline. A self-contained official
-Plugin ZIP and tenant-compatible `BaseChannel` facade are still required before
-live QwenPaw Channel registration.
+Phase 12.6 uses `scripts/build_extension.py --qwenpaw-plugin
+wecom-channel-plugin` to generate a self-contained official Plugin ZIP. A
+tenant-compatible `BaseChannel` facade and real QwenPaw installation validation
+are still required before live Channel registration.
