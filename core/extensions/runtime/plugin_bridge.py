@@ -51,6 +51,18 @@ ALLOWED_EXTERNAL_EXTENSIONS = {
         runtime=ExtensionRuntime.PYTHON,
         entrypoint="recovered/wecom_kf_gateway_v345.py",
     ),
+    "wechat-mp": _AllowedExternalExtension(
+        source_root="plugins",
+        type=ExtensionType.PLUGIN,
+        runtime=ExtensionRuntime.PYTHON,
+        entrypoint="recovered/wechat_mp_gateway.py",
+    ),
+    "hermes": _AllowedExternalExtension(
+        source_root="plugins",
+        type=ExtensionType.PLUGIN,
+        runtime=ExtensionRuntime.PYTHON,
+        entrypoint="recovered/hermes-agent-main/gateway/run.py",
+    ),
 }
 
 
