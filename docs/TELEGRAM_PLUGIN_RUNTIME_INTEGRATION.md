@@ -62,7 +62,7 @@ Phase 7.5 测试使用 Fake Transport。没有调用 Telegram API，没有启动
 
 位置：`core/extensions/runtime/plugin_bridge.py`。
 
-当前严格白名单：
+Telegram路径的严格白名单：
 
 ```text
 name:       telegram
@@ -70,6 +70,8 @@ type:       adapter
 runtime:    python
 entrypoint: recovered/telegram_bridge_main.py
 ```
+
+Phase 7.6起，同一通用Bridge还允许经过独立声明的WeCom Node Plugin；这不会扩大Telegram入口、类型或runtime范围。WeCom规则见`WECOM_PLUGIN_RUNTIME_INTEGRATION.md`。
 
 Bridge 负责：
 

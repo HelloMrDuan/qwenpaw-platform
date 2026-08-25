@@ -22,7 +22,30 @@ from core.extensions.lifecycle import (
 
 
 ALLOWED_EXTENSION_NAME = "telegram"
-ALLOWED_ENTRYPOINT = "recovered/telegram_bridge_main.py"
+
+
+@dataclass(frozen=True, slots=True)
+class _AllowedExternalExtension:
+    source_root: str
+    type: ExtensionType
+    runtime: ExtensionRuntime
+    entrypoint: str
+
+
+ALLOWED_EXTERNAL_EXTENSIONS = {
+    "telegram": _AllowedExternalExtension(
+        source_root="adapters",
+        type=ExtensionType.ADAPTER,
+        runtime=ExtensionRuntime.PYTHON,
+        entrypoint="recovered/telegram_bridge_main.py",
+    ),
+    "wecom": _AllowedExternalExtension(
+        source_root="plugins",
+        type=ExtensionType.PLUGIN,
+        runtime=ExtensionRuntime.NODE,
+        entrypoint="recovered/wecom-node/wecom_bridge.mjs",
+    ),
+}
 
 
 class ExternalServiceState(str, Enum):
@@ -109,23 +132,22 @@ class PluginRuntimeBridge:
 
     def describe(self, name: str = ALLOWED_EXTENSION_NAME) -> PluginRuntimeDescriptor:
         metadata = self._metadata(name)
-        if metadata.entrypoint != ALLOWED_ENTRYPOINT:
+        allowed = ALLOWED_EXTERNAL_EXTENSIONS[name]
+        if metadata.entrypoint != allowed.entrypoint:
             raise PluginRuntimeBridgeError(
-                "Telegram entrypoint differs from the recovered allowlist"
+                f"{name} entrypoint differs from the recovered allowlist"
             )
-        extension_root = (self.repository_root / "adapters" / name).resolve()
+        extension_root = (
+            self.repository_root / allowed.source_root / name
+        ).resolve()
         manifest_path = extension_root / "manifest.yaml"
         entrypoint_path = (
-            extension_root / Path(*Path(ALLOWED_ENTRYPOINT).parts)
+            extension_root / Path(*Path(allowed.entrypoint).parts)
         ).resolve()
-        expected_entrypoint = (
-            extension_root / "recovered" / "telegram_bridge_main.py"
-        ).resolve()
-        if (
-            entrypoint_path != expected_entrypoint
-            or not entrypoint_path.is_relative_to(extension_root)
-        ):
-            raise PluginRuntimeBridgeError("Telegram historical entrypoint is not allowed")
+        if not entrypoint_path.is_relative_to(extension_root):
+            raise PluginRuntimeBridgeError(
+                f"{name} historical entrypoint is not allowed"
+            )
         return PluginRuntimeDescriptor(
             name=metadata.name,
             version=metadata.version,
@@ -242,15 +264,20 @@ class PluginRuntimeBridge:
         )
 
     def _metadata(self, name: str) -> ExtensionMetadata:
-        if name != ALLOWED_EXTENSION_NAME:
+        allowed = ALLOWED_EXTERNAL_EXTENSIONS.get(name)
+        if allowed is None:
             raise PluginRuntimeBridgeError(
-                "Phase 7.5 only permits the recovered telegram adapter"
+                "external Plugin Runtime Bridge does not allow this Extension"
             )
         metadata = self.registry.get(name)
         if metadata is None:
             raise PluginRuntimeBridgeError(f"Extension is not registered: {name}")
-        if metadata.type is not ExtensionType.ADAPTER:
-            raise PluginRuntimeBridgeError("telegram must be registered as an adapter")
-        if metadata.runtime is not ExtensionRuntime.PYTHON:
-            raise PluginRuntimeBridgeError("telegram recovered runtime must be Python")
+        if metadata.type is not allowed.type:
+            raise PluginRuntimeBridgeError(
+                f"{name} must be registered as {allowed.type.value}"
+            )
+        if metadata.runtime is not allowed.runtime:
+            raise PluginRuntimeBridgeError(
+                f"{name} recovered runtime must be {allowed.runtime.value}"
+            )
         return metadata
