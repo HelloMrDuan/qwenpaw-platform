@@ -231,6 +231,20 @@ class ExtensionLifecycleManager:
             self._write_record(failed)
         return report
 
+    def fail(self, name: str, error: str) -> LifecycleRecord:
+        """Synchronize an externally observed Runtime failure into local state."""
+
+        if not isinstance(error, str) or not error.strip():
+            raise ExtensionLifecycleError("failure error must be non-empty text")
+        record = self.get(name)
+        failed = record.transition(
+            ExtensionState.FAILED,
+            LifecycleAction.HEALTH,
+            error=error,
+        )
+        self._write_record(failed)
+        return failed
+
     def upgrade(
         self,
         package_path: str | Path,

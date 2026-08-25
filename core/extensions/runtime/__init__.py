@@ -12,6 +12,14 @@ from .models import (
     SkillRuntimeResult,
     StreamEventPublisher,
 )
+from .plugin_bridge import (
+    ExternalServiceProbe,
+    ExternalServiceSnapshot,
+    ExternalServiceState,
+    PluginRuntimeBridge,
+    PluginRuntimeBridgeError,
+    PluginRuntimeDescriptor,
+)
 from .skill_invoker import SkillInvocationError, SkillInvoker
 
 __all__ = [
@@ -19,6 +27,12 @@ __all__ = [
     "ArtifactResolver",
     "ExecutorLoadError",
     "ExtensionExecutorBridge",
+    "ExternalServiceProbe",
+    "ExternalServiceSnapshot",
+    "ExternalServiceState",
+    "PluginRuntimeBridge",
+    "PluginRuntimeBridgeError",
+    "PluginRuntimeDescriptor",
     "SkillExecutorDescriptor",
     "SkillInvocationError",
     "SkillInvoker",
