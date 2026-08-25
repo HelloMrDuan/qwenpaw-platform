@@ -1,0 +1,29 @@
+{
+  "id": "<plugin-id>",
+  "name": "<display-name>",
+  "version": "<extension-version>",
+  "type": "general",
+  "description": "<description>",
+  "author": "qwenpaw-platform",
+  "entry": {
+    "backend": "plugin.py"
+  },
+  "dependencies": [],
+  "qwenpaw_version": {
+    "min": "2.1.0",
+    "max": "2.2.0"
+  },
+  "meta": {
+    "extension": {
+      "name": "<extension-name>",
+      "type": "<skill|plugin|adapter>",
+      "manifest": "manifest.yaml",
+      "runtime": "<python|node>",
+      "declared_entrypoint": "<historical-or-executor-entrypoint>",
+      "adapter_entrypoint": "<extension-adapter-entrypoint>"
+    },
+    "permissions": [],
+    "config": {},
+    "required_secrets": []
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "telegram-extension-channel",
+  "name": "Telegram Extension Channel",
+  "version": "0.1.0-recovered",
+  "type": "channel",
+  "description": "Official QwenPaw Plugin facade for the recovered Telegram Extension Adapter.",
+  "author": "qwenpaw-platform",
+  "entry": {
+    "backend": "plugin.py"
+  },
+  "dependencies": [],
+  "qwenpaw_version": {
+    "min": "2.1.0",
+    "max": "2.2.0"
+  },
+  "meta": {
+    "extension": {
+      "name": "telegram",
+      "type": "adapter",
+      "manifest": "adapters/telegram/manifest.yaml",
+      "runtime": "python",
+      "declared_entrypoint": "recovered/telegram_bridge_main.py",
+      "adapter_entrypoint": "adapters/telegram/runtime.py"
+    },
+    "permissions": [
+      "extension.registry.read",
+      "extension.runtime.gateway",
+      "channel.telegram.transport"
+    ],
+    "config": {
+      "fields": [
+        {
+          "name": "TELEGRAM_BOT_TOKEN",
+          "type": "password",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "values": {}
+    },
+    "required_secrets": [
+      "TELEGRAM_BOT_TOKEN"
+    ]
+  }
+}
