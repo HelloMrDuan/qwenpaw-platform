@@ -1,0 +1,1 @@
+"""Console Channel Adapter tests."""

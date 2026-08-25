@@ -1,0 +1,1 @@
+"""Offline Channel Adapter tests."""
