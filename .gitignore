@@ -1,5 +1,6 @@
 # Original cloud export (kept locally; contains credentials and runtime data)
 qwenpaw-platform-export.zip
+channel-runtime-recovery-export.zip
 *.tar.gz
 
 # Local credentials and user-specific workspace state
