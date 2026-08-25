@@ -46,6 +46,9 @@ sessions/*
 media/
 tmp/
 
+# Locally generated Extension release artifacts
+dist/extensions/
+
 # Local sanitized PDF acceptance fixtures (structure only in Git)
 tests/fixtures/pdf-editor/simple/*
 !tests/fixtures/pdf-editor/simple/.gitkeep
