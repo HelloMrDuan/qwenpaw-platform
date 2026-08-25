@@ -49,6 +49,9 @@ tmp/
 # Locally generated Extension release artifacts
 dist/extensions/
 
+# Local offline Extension deployment simulation
+workspace/extensions/
+
 # Local sanitized PDF acceptance fixtures (structure only in Git)
 tests/fixtures/pdf-editor/simple/*
 !tests/fixtures/pdf-editor/simple/.gitkeep

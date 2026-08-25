@@ -264,14 +264,16 @@ def collect_package_files(extension_root: str | Path) -> tuple[Path, ...]:
         relative = candidate.relative_to(root)
         if candidate.is_symlink():
             raise ExtensionPackagingError(f"symbolic links are not packaged: {relative}")
-        if _excluded(relative):
+        if is_excluded_package_path(relative):
             continue
         if candidate.is_file():
             files.append(candidate)
     return tuple(sorted(files, key=lambda path: path.relative_to(root).as_posix()))
 
 
-def _excluded(relative: Path) -> bool:
+def is_excluded_package_path(relative: Path) -> bool:
+    """Return whether a relative path is forbidden in a release package."""
+
     lower_parts = tuple(part.lower() for part in relative.parts)
     if any(part in IGNORED_DIRECTORIES for part in lower_parts[:-1]):
         return True
