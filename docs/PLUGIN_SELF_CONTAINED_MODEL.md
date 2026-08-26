@@ -1,5 +1,10 @@
 # QwenPaw Plugin Self-contained Packaging Model
 
+> **Strategy status:** Telegram and WeCom packaging is retained as `LEGACY /
+> FALLBACK / REFERENCE ONLY`. Production uses QwenPaw v2.1.0 built-in Channels;
+> no custom Telegram/WeCom `BaseChannel` or Channel registration work follows
+> from this packaging model.
+
 ## 1. Goal and boundary
 
 Phase 12.6 converts the three source-level Channel Plugin facades into
@@ -224,10 +229,11 @@ Automated verification at acceptance:
 
 ## 9. Remaining Runtime boundary
 
-Self-contained Python import does not equal a completed QwenPaw Channel
-installation. The Plugins still register only their safe metadata startup hook;
-a target-version-compatible QwenPaw `BaseChannel` facade and
-`PluginApi.register_channel(...)` validation remain a later phase.
+Self-contained Python import does not grant production Channel status. For
+Telegram and WeCom, no `BaseChannel` facade or `PluginApi.register_channel(...)`
+phase will follow: the built-in QwenPaw Channels are authoritative. WeChat
+Customer remains a separate custom capability assessment because its Gateway
+state model differs from built-in 微信.
 
 No real AgentScope/QwenPaw installation, secret injection, provider API call,
 Bridge startup, or Gateway startup is performed here.

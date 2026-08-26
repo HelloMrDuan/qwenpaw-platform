@@ -1,5 +1,9 @@
 # AgentScope Runtime Deployment Validation
 
+> Channel policy: Install Plans for historical Telegram/WeCom packages are
+> simulation evidence only and are not production plans. Use QwenPaw v2.1.0
+> built-in Channels; assess WeChat Customer separately.
+
 ## 1. Validation objective
 
 Phase 9.0 validates the deployment handoff up to—but not including—real

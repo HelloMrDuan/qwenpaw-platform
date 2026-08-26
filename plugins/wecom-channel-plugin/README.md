@@ -1,6 +1,10 @@
 # WeCom Extension Channel Plugin
 
-Official QwenPaw v2.1 Plugin facade for the existing WeCom Extension Adapter.
+> Status: `LEGACY / FALLBACK / REFERENCE ONLY`. Production uses the QwenPaw
+> v2.1.0 built-in WeCom Channel. Do not add a custom WeCom `BaseChannel` or
+> `register_channel()` implementation here.
+
+Historical packaging facade for the existing WeCom Extension Adapter.
 
 The entry delegates message conversion and response delivery to
 `adapters/wecom/runtime.py`. It does not import, copy, start, or modify the
@@ -14,7 +18,8 @@ historical `wecom_bridge.mjs` or `bot.mjs` implementation.
 - Provider credentials are declared by name only; values are not stored here.
 - The Node process remains externally supervised and owns provider I/O.
 
-Phase 12.6 uses `scripts/build_extension.py --qwenpaw-plugin
-wecom-channel-plugin` to generate a self-contained official Plugin ZIP. A
-tenant-compatible `BaseChannel` facade and real QwenPaw installation validation
-are still required before live Channel registration.
+Phase 12.6 used `scripts/build_extension.py --qwenpaw-plugin
+wecom-channel-plugin` to validate self-contained packaging. That artifact is a
+fallback/reference package, not a production Channel candidate. Custom WeCom
+Channel registration work is closed; configure and validate the built-in
+Channel instead.

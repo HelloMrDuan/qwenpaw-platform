@@ -84,17 +84,23 @@ Exit criteria:
 
 Goal: bring priority channels to reliable production operation on shared contracts.
 
-Recommended order:
+Production strategy:
 
 1. Console reference channel.
-2. Telegram.
-3. WeCom / 企业微信.
-4. WeChat / 微信客服.
-5. Additional channels based on demand.
+2. Configure and accept the built-in Telegram Channel.
+3. Configure and accept the built-in WeCom / 企业微信 Channel.
+4. Configure and accept the built-in WeChat / 微信 Channel.
+5. Verify WeChat Customer separately; do not equate its Gateway/cursor/database
+   chain with built-in 微信.
+6. Verify Hermes only if an independent production role remains.
 
 Deliverables:
 
-- Channel adapters using the unified message and response-stream contracts.
+- Built-in Channel configuration and acceptance evidence for Telegram, WeCom,
+  and WeChat; no replacement `BaseChannel` development.
+- Legacy Telegram/WeCom Adapter, Plugin, and Bridge assets retained as
+  `LEGACY / FALLBACK / REFERENCE ONLY`.
+- A separate capability decision for WeChat Customer before any custom work.
 - Credential injection, webhook or socket lifecycle, idempotency, and rate-limit handling.
 - Health checks, structured logs, metrics, replay fixtures, and deployment runbooks.
 - End-to-end tests for inbound text, attachments, tool use, error fallback, and outbound delivery.

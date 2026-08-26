@@ -123,9 +123,10 @@ Validate media type, size, checksum, and workspace path before download or uploa
 | Channel | Current state | First migration behavior |
 | --- | --- | --- |
 | Console | Enabled | Reference normalization and renderer |
-| Telegram | Configured, disabled | Buffered text first, then edit-based streaming |
-| WeCom | Configured, disabled | Text and artifact reliability before streaming |
-| WeChat | Configured, disabled | Buffered replies and provider-specific acknowledgement |
+| Telegram | QwenPaw v2.1.0 built-in | Configure and accept built-in streaming, typing, proxy, and access control |
+| WeCom | QwenPaw v2.1.0 built-in | Configure and accept built-in authorization, media, and group context |
+| WeChat | QwenPaw v2.1.0 built-in | Configure and accept the built-in login/Bot Token model |
+| WeChat Customer | Custom / to verify | Preserve Gateway/cursor/DB boundary while checking built-in coverage |
 
 Channel capabilities are negotiated. The core emits one response-event model; the adapter may stream natively, edit a message periodically, or buffer until completion.
 
@@ -134,6 +135,7 @@ Channel capabilities are negotiated. The core emits one response-event model; th
 1. Capture Console fixtures and behavior.
 2. Implement and validate normalization with Console only.
 3. Define response rendering against the streaming contract.
-4. Add Telegram behind a disabled-by-default adapter flag.
-5. Add WeCom after gateway source and deployment dependencies are recovered.
-6. Add WeChat customer service after callback, acknowledgement, and API constraints are documented and tested.
+4. Validate Telegram through the built-in Channel; do not implement a replacement Adapter/BaseChannel.
+5. Validate WeCom through the built-in Channel; retain recovered assets only as fallback/reference.
+6. Validate built-in WeChat separately from the historical WeChat Customer chain.
+7. Decide whether WeChat Customer needs a custom integration only after callback, cursor, database, deduplication, and API constraints are verified.

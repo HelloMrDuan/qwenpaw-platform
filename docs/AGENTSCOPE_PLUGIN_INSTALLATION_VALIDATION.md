@@ -1,5 +1,11 @@
 # AgentScope/QwenPaw Plugin Installation Validation
 
+> **Strategy status:** Telegram and WeCom packages in this report are
+> `LEGACY / FALLBACK / REFERENCE ONLY`. QwenPaw v2.1.0 built-in Channels are the
+> production default. No Telegram/WeCom `BaseChannel`, custom Channel
+> registration, or production reinstall is planned. WeChat Customer remains
+> `CUSTOM / TO VERIFY`. See `QWENPAW_CHANNEL_STRATEGY.md`.
+
 > Historical Phase 12.5 record. Its three-file candidate ZIPs were superseded
 > by the self-contained Phase 12.6 packages documented in
 > `docs/PLUGIN_SELF_CONTAINED_MODEL.md`; the hashes below remain the evidence for
@@ -194,26 +200,14 @@ The successful PDF Editor Skill validation therefore does not prove Plugin ZIP
 compatibility. Plugin installation requires a separate package, import,
 registration, lifecycle, uninstall, and rollback acceptance process.
 
-## 9. Required next validation phase
+## 9. Superseded implementation direction
 
-Without changing historical provider logic, a later implementation phase must:
-
-1. build a self-contained official Plugin archive containing the generic
-   wrapper, required `core` modules, existing Adapter, and internal Manifest;
-2. remove source-repository path assumptions from the installed entry layout;
-3. add a thin tenant-version-compatible QwenPaw `BaseChannel` facade that
-   delegates to the existing Adapter;
-4. validate `PluginApi.register_channel(...)` without embedding historical
-   Bridge/Gateway business logic;
-5. install in a disposable QwenPaw v2.1 environment while the Runtime is
-   offline;
-6. verify Plugin list/info, Channel registration, enable/disable, health,
-   uninstall, and rollback;
-7. only then perform a secret-injected staging test against supervised external
-   processes.
-
-No production or cloud installation should occur before these blockers are
-closed.
+The earlier plan to add Telegram and WeCom `BaseChannel` facades and validate
+`PluginApi.register_channel(...)` is cancelled. Package and import records are
+retained as historical engineering evidence only. Production validation moves
+to the built-in Channel configuration surface. WeChat Customer must be assessed
+separately because its Gateway/cursor/database semantics are not equivalent to
+the built-in 微信 login model.
 
 ## 10. Phase 12.7 real QwenPaw v2.1.0 feedback
 
@@ -483,6 +477,8 @@ Repository acceptance result: **114/114 tests PASS** using the locked local
 development environment (`.venv`). The same-process namespace probe and the
 three direct ZIP-only import probes are included in that total.
 
-The corrected WeCom and WeChat Customer ZIPs still require a second real
-AgentScope/QwenPaw installation attempt. Their status is **OFFLINE NAMESPACE
-FIX VALIDATED / REAL REINSTALL PENDING**.
+The corrected WeCom ZIP remains an offline fallback/reference artifact; a real
+reinstall is not planned because production uses the built-in 企业微信 Channel.
+The WeChat Customer package remains **OFFLINE NAMESPACE FIX VALIDATED / CUSTOM
+CAPABILITY TO VERIFY**; package installation is not authorized until the
+separate business-chain assessment is complete.

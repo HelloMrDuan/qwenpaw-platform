@@ -1,5 +1,9 @@
 # AgentScope Deployment Bridge
 
+> Channel policy: this offline mapper does not authorize replacement Channels.
+> Telegram、企业微信和微信 use QwenPaw v2.1.0 built-ins; repository
+> Telegram/WeCom packages are reference-only. WeChat Customer is `TO VERIFY`.
+
 ## 1. Purpose
 
 Phase 8.5 defines an offline bridge from a verified QwenPaw Extension release

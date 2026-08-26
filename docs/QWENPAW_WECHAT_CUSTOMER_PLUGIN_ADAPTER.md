@@ -1,5 +1,10 @@
 # QwenPaw WeChat Customer Plugin Adapter
 
+> Status: `CUSTOM / TO VERIFY`. This historical open-kfid Gateway chain is not
+> equivalent to QwenPaw's built-in 微信 QR-login/Bot Token Channel. Do not add a
+> new BaseChannel or deploy this facade until cursor, DB ownership,
+> deduplication, session, and rollback semantics are verified.
+
 ## Purpose
 
 `plugins/wechat-customer-channel-plugin` exposes the existing WeChat Customer
@@ -55,7 +60,8 @@ session mapping behavior, state-ownership metadata, response receipt,
 lifecycle/health, Gateway hash preservation, and absence of new database or
 cursor files.
 
-Live installation remains deferred until a self-contained official Plugin ZIP,
-supervised Gateway Transport, and tenant-compatible QwenPaw `BaseChannel`
-facade are available. No real WeChat API, secret, Gateway process, or database
-is used in this phase.
+Live installation and new Channel development are not authorized in this
+phase. First verify whether QwenPaw provides the required open-kfid semantics
+and whether Gateway cursor, deduplication, session, database ownership, and
+rollback can be preserved. No real WeChat API, secret, Gateway process, or
+database is used in this phase.

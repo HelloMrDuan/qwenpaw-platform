@@ -1,5 +1,9 @@
 # WeChat Customer Gateway Runtime Integration
 
+> Strategy status: `CUSTOM / TO VERIFY`. Preserve this Gateway boundary and its
+> state-ownership rules, but do not implement or deploy a new Channel until the
+> built-in QwenPaw 微信 capability comparison is complete.
+
 ## 1. Scope
 
 Phase 7.7 places a narrow Extension Runtime boundary around the recovered

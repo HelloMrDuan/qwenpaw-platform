@@ -157,6 +157,6 @@ Agent 和 Skill 不读取这些 Channel 能力；只有 Stream Coordinator 与 R
 2. 用 Console 最终文本构造 `agent.start → message.delta → agent.done`，验证收集结果与现状一致。
 3. 增加 Tool Event 兼容 Adapter，不修改现有 Skill。
 4. 建立 Console Renderer 和协议测试。
-5. 最后按 Telegram、企业微信、微信的真实能力逐个接入，默认关闭并通过 staging 验收。
+5. 最后通过 QwenPaw v2.1.0 内置 Telegram、企业微信、微信 Channel 逐个完成 staging 验收；不实现替代 BaseChannel。微信客服流式策略须等待独立能力核验。
 
 本阶段只完成设计文档，不执行上述实现步骤。

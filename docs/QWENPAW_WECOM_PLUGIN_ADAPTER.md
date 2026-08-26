@@ -1,5 +1,9 @@
 # QwenPaw WeCom Plugin Adapter
 
+> Status: `LEGACY / FALLBACK / REFERENCE ONLY`. Production uses the QwenPaw
+> v2.1.0 built-in 企业微信 Channel. Custom WeCom `BaseChannel` and Channel
+> registration development is stopped.
+
 ## Purpose
 
 `plugins/wecom-channel-plugin` exposes the recovered WeCom Extension through
@@ -54,6 +58,6 @@ Offline tests validate official Manifest generation, Plugin entry loading,
 Registry discovery, Runtime Gateway message flow, response receipt, health,
 lifecycle, and historical-file hashes.
 
-Live installation remains deferred until a self-contained official Plugin ZIP,
-supervised Node Transport, and QwenPaw `BaseChannel` facade are validated against
-the target tenant.
+Live installation is not planned. The self-contained ZIP and offline tests are
+retained as fallback/reference evidence; production staging must validate the
+built-in 企业微信 Channel instead.

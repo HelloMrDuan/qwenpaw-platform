@@ -1,5 +1,10 @@
 # QwenPaw Official Plugin Adapter Model
 
+> **Strategy status:** the Telegram and WeCom facades described here are
+> `LEGACY / FALLBACK / REFERENCE ONLY`. They must not be extended into custom
+> production Channels. QwenPaw v2.1.0 built-in Telegram and 企业微信 Channels are
+> the production path. Only WeChat Customer remains `CUSTOM / TO VERIFY`.
+
 ## 1. Purpose
 
 Phase 12 adds a compatibility facade between this repository's internal
@@ -87,11 +92,10 @@ existing Adapter.
 | `wechat-customer-channel-plugin` | `adapters/wechat_customer/runtime.py` | `wecom_kf_gateway_v345.py` |
 
 The official `register(api)` entry currently registers a process-safe startup
-hook that validates Extension metadata. Live `api.register_channel(...)`
-activation is intentionally deferred until a supervised Telegram transport and
-a tenant-version-compatible QwenPaw Channel facade is available. This phase
-therefore proves the packaging and delegation contract, not external service
-connectivity.
+hook that validates Extension metadata. Live Telegram/WeCom
+`api.register_channel(...)` activation is cancelled because those Channels are
+built into QwenPaw v2.1.0. This phase proves historical packaging and delegation
+behavior, not a production implementation plan.
 
 ## 4. Message and lifecycle flow
 
@@ -145,11 +149,12 @@ Phase 12 is accepted when:
 6. historical Telegram source hashes remain unchanged;
 7. all repository tests pass offline.
 
-Phase 12.6 now builds self-contained official Plugin ZIPs containing the
-existing Adapter, generic wrapper, contracts, core dependency closure, and
-internal Manifest. Tenant upload still requires validation of the concrete
-QwenPaw `PluginApi`/Channel API without changing recovered provider business
-logic. See `docs/PLUGIN_SELF_CONTAINED_MODEL.md`.
+Phase 12.6 built self-contained official Plugin ZIPs containing the existing
+Adapter, generic wrapper, contracts, core dependency closure, and internal
+Manifest. Telegram and WeCom tenant upload is no longer a target. WeChat
+Customer must first pass a separate capability assessment before any concrete
+PluginApi or Channel API work is authorized. See
+`docs/QWENPAW_CHANNEL_STRATEGY.md`.
 
 ## 7. Official references
 

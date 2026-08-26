@@ -1,6 +1,8 @@
 # Telegram Historical Adapter Source
 
-状态：`RECOVERED_SOURCE_ONLY`。该目录保存历史 Telegram Bridge，尚未实现 Extension Contract 包装，也未接入 Runtime。
+> 状态：`LEGACY / FALLBACK / REFERENCE ONLY`。QwenPaw v2.1.0 已提供生产默认的内置 Telegram Channel；禁止继续将本目录开发为生产 `BaseChannel` 或自定义 Channel 注册入口。
+
+该目录保存历史 Telegram Bridge、离线 Adapter 与恢复证据。源码和测试继续保留，但不替代内置 Telegram Channel，也不作为生产部署候选。
 
 ## 来源与目录纠正
 

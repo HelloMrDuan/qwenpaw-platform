@@ -4,6 +4,13 @@
 
 This report records the deployment surfaces confirmed for the current AgentScope/QwenPaw tenant during Phase 11.0. It is a read-only capability probe: no package was uploaded, no URL was submitted, no secret was read, and no Runtime, Plugin, Channel, or Gateway process was started or modified.
 
+> **Strategic update (2026-08-26):** the QwenPaw v2.1.0 Console confirms that
+> Telegram, 企业微信, and 微信 are built-in Channels. Production must use those
+> built-in entries. The custom Channel Plugin path below applies only to a
+> capability that QwenPaw does not provide, currently `WeChat Customer / TO
+> VERIFY`; it is not a roadmap for custom Telegram or WeCom `BaseChannel`
+> development. See `QWENPAW_CHANNEL_STRATEGY.md`.
+
 Probe date: 2026-08-25 (Asia/Shanghai).
 
 Evidence levels used below:
@@ -33,7 +40,7 @@ The screenshots contain no tenant identifier or credentials and are not copied i
 | `skills/*.skill.zip` | Skill Center / Skill Pool upload and activation | `TENANT_VERIFIED` | Verified for PDF Editor v1.2.0 | Supported |
 | `plugins/*.plugin.zip` | Settings → Plugin Management → Install Plugin → folder/ZIP or URL | `TENANT_VERIFIED` for official Plugin ZIP | `FORMAT_ADAPTATION_REQUIRED` for current repository packages | Entry exists, package contract must be adapted |
 | `adapters/*.adapter.zip` | No standalone Adapter upload page found | `NOT_CONFIRMED` | Current package has no official standalone target | Not directly supported |
-| Channel Plugin ZIP | Plugin Management → Install Plugin, then Control → Channels | `TENANT_VERIFIED` entry and `OFFICIAL_DOCUMENTED` channel type | Requires official QwenPaw Channel Plugin contract | Recommended Adapter/Channel deployment path |
+| Channel Plugin ZIP | Plugin Management → Install Plugin, then Control → Channels | `TENANT_VERIFIED` entry and `OFFICIAL_DOCUMENTED` channel type | Requires official QwenPaw Channel Plugin contract | Custom-only path; not used for built-in Telegram/WeCom/WeChat |
 
 ## 4. Skill upload capability
 
@@ -99,7 +106,12 @@ my-plugin/
 
 ### Compatibility with this repository
 
-The current `qwenpaw-platform` release packages contain the repository's Extension Contract `manifest.yaml`. Historical packages such as WeCom, WeChat Customer, WeChat MP, and Hermes do **not** currently provide a top-level official `plugin.json` plus QwenPaw `plugin.py` registration entry.
+At the time of the Phase 11 probe, the repository's original Extension packages
+contained only the internal `manifest.yaml`. Later Phase 12 historical facades
+added top-level `plugin.json` and `plugin.py` candidates for packaging research.
+Those later candidates do not change the production Channel strategy: Telegram
+and WeCom candidates are `LEGACY / FALLBACK / REFERENCE ONLY`; WeChat Customer
+remains `CUSTOM / TO VERIFY`.
 
 Therefore:
 
@@ -132,17 +144,21 @@ QwenPaw officially models custom Channels as Plugins. A Channel Plugin uses:
 
 After installation, the Channel appears under Control → Channels for configuration and enable/disable operations. See the official [Custom Channel Plugin example](https://github.com/agentscope-ai/QwenPaw/blob/main/website/public/docs/plugins.en.md#example-10-register-a-custom-channel) and [QwenPaw channel contribution contract](https://github.com/agentscope-ai/QwenPaw/blob/main/CONTRIBUTING.md#adding-new-channels).
 
-Recommended mapping:
+Custom-only mapping, after proving that no built-in Channel covers the required
+business semantics:
 
 ```text
-qwenpaw-platform Adapter + historical Bridge
+verified custom Adapter + separately supervised Gateway
   → official QwenPaw Channel Plugin facade
   → plugin.json(type=channel)
   → Plugin Management ZIP install
   → Control → Channels configuration
 ```
 
-This is a future packaging and integration task. It is not implemented by this report.
+This path must not be used to duplicate Telegram, WeCom, or WeChat built-in
+capabilities. For the current repository it is relevant only to the separate
+WeChat Customer `open_kfid`/`external_userid`/cursor/Gateway chain, and only
+after capability verification.
 
 ## 7. Supported and unsupported types
 
@@ -186,24 +202,35 @@ Manual deployment here means an operator-controlled installation path, not copyi
 
 ### Adapter / Channel
 
-1. Keep MessageEvent/DeliveryReceipt adapters as internal testable components.
-2. Wrap the transport in an official Channel Plugin facade.
-3. Implement the QwenPaw `BaseChannel` and `PluginApi.register_channel` boundaries without copying historical business logic.
-4. Install the resulting official Channel Plugin ZIP through Plugin Management.
-5. Inject secrets through tenant configuration only after a separate security review.
-6. Enable one staging Channel instance and run provider-level acceptance tests.
+1. Configure Telegram, 企业微信, and 微信 through their QwenPaw v2.1.0 built-in
+   Channel entries.
+2. Inject credentials only through the built-in Runtime configuration surface.
+3. Validate built-in streaming, media, typing/context, access control, health,
+   enable/disable, and rollback behavior in staging.
+4. Keep recovered Telegram/WeCom Adapters, Plugins, and Bridges as
+   `LEGACY / FALLBACK / REFERENCE ONLY`.
+5. For WeChat Customer, first verify whether the Runtime supports
+   `open_kfid`, `external_userid`, cursor, Gateway-owned DB, and deduplication.
+6. Consider a custom Channel Plugin only if that verification proves a real
+   built-in gap and a separate architecture decision authorizes development.
 
 For self-managed QwenPaw only, the official CLI can install local/URL Plugins. Filesystem copying into internal directories should be reserved for documented recovery procedures and must not be used as the managed-tenant default.
 
 ## 9. Recommended next integration plan
 
-1. **Create an official package conformance checker** for `plugin.json`, backend entry, supported type, dependencies, ZIP root, and QwenPaw version range.
-2. **Package one low-risk Plugin pilot** for v2.1.0 without secrets or external connections.
-3. **Do not use Hermes as the first pilot** because its recovered dependency snapshot is incomplete and its source tree is large.
-4. **Convert Telegram or WeCom to an official Channel Plugin facade** only after the generic Plugin pilot installs and rolls back successfully.
-5. **Use Cloud staging** for install, restart, enable, health, message, and uninstall validation.
-6. **Record tenant evidence**: masked tenant/workspace ID, QwenPaw build, Plugin ID/version, package SHA-256, install result, restart requirement, health result, and rollback result.
-7. **Keep the existing Extension package format** as the repository's internal release and deployment-plan format; produce a separate official QwenPaw deployment artifact rather than silently changing historical packages.
+1. **Accept the built-in Channel strategy** for Telegram, 企业微信, and 微信.
+2. **Use Cloud staging** to validate the built-in configuration and lifecycle,
+   without installing repository replacement Plugins.
+3. **Keep Telegram and WeCom recovery assets unchanged** as fallback/reference
+   evidence; packaging PASS does not make them production candidates.
+4. **Verify WeChat Customer independently**, including `open_kfid`,
+   `external_userid`, cursor, database ownership, deduplication, and rollback.
+5. **Keep Hermes at `TO VERIFY`** until its independent role and dependency
+   completeness are proven.
+6. **Continue PDF Editor through the custom Skill path**, which has real
+   Workspace validation.
+7. **Record tenant evidence** for every staging decision without storing secret
+   values in Git.
 
 ## 10. Final conclusion
 
@@ -213,6 +240,7 @@ For self-managed QwenPaw only, the official CLI can install local/URL Plugins. F
 | Official QwenPaw Plugin | Folder/ZIP/URL install entry confirmed in v2.1.0 tenant |
 | Current repository Plugin package | Requires official package facade before upload |
 | Standalone Adapter package | No dedicated deployment entry confirmed |
-| Channel Adapter | Deploy as an official QwenPaw Channel Plugin, not as `.adapter.zip` |
+| Built-in Telegram/WeCom/WeChat | Configure the QwenPaw v2.1.0 built-in Channel; do not deploy replacement Plugins |
+| WeChat Customer | `CUSTOM / TO VERIFY`; custom Plugin path only after a proven built-in gap |
 
 The tenant supports more than Skill upload: it has a real Plugin management surface. The remaining boundary is package-contract compatibility, not the absence of a Plugin entry. No evidence currently supports direct activation of the repository's standalone Adapter format.

@@ -1,5 +1,10 @@
 # AgentScope Extension 全量验证摘要
 
+> Strategy note: Telegram and WeCom results below are retained offline
+> regression evidence only (`LEGACY / FALLBACK / REFERENCE ONLY`). Production
+> uses QwenPaw v2.1.0 built-in Channels. WeChat Customer remains `CUSTOM / TO
+> VERIFY`; passing its Mock flow does not authorize deployment.
+
 ## 验证范围
 
 本摘要汇总 Phase 9 至 Phase 10 的 Skill、Adapter 与 Plugin 验证证据。验证等级必须区分：

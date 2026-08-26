@@ -1,5 +1,7 @@
 # AgentScope Hermes 模拟链路验证
 
+> 战略状态：`TO VERIFY`。保留历史验证与恢复资产，但在确认 Hermes 相对 QwenPaw 内置 Channels 的独立生产职责前，不进入部署或功能开发。
+
 ## 测试目的
 
 验证 `hermes` Plugin 的 Manifest、历史 Gateway 入口、Plugin Runtime Bridge 描述，以及通用消息/响应契约进入 Extension Runtime Gateway 的能力。状态：`PASS_PLUGIN_CONTRACT_SIMULATION`。

@@ -1,5 +1,8 @@
 # WeCom Plugin Runtime Integration
 
+> 当前分类：`LEGACY / FALLBACK / REFERENCE ONLY`。生产使用 QwenPaw v2.1.0
+> 内置企业微信 Channel；本文不再作为自定义 BaseChannel、Plugin 注册或部署路线。
+
 状态：Phase 7.6 历史企业微信Node Bridge外部进程桥接基线。本文描述recovered WeCom Plugin如何进入Extension Runtime，不代表已经连接真实企业微信、Hermes或QwenPaw Runtime。
 
 ## 1. 历史资产定位

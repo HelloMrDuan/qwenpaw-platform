@@ -1,5 +1,8 @@
 # Telegram Plugin Runtime Integration
 
+> 当前分类：`LEGACY / FALLBACK / REFERENCE ONLY`。生产使用 QwenPaw v2.1.0
+> 内置 Telegram Channel；本文不再作为自定义 BaseChannel、Plugin 注册或部署路线。
+
 状态：Phase 7.5 历史 Telegram Bridge 外部进程桥接基线。本文描述 recovered Telegram Adapter 如何进入 Extension Runtime，不代表已经连接真实 Telegram、Hermes 或 QwenPaw Runtime。
 
 ## 1. 为什么采用外部进程桥接

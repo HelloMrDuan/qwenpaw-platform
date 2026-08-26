@@ -1,5 +1,7 @@
 # AgentScope 微信客服模拟链路验证
 
+> 战略状态：`CUSTOM / TO VERIFY`。该链路使用 `open_kfid`、`external_userid`、cursor、Gateway-owned DB 与去重语义，不等同于 QwenPaw v2.1.0 内置“微信”。离线 PASS 仅保留边界证据，不授权开发或部署。
+
 ## 测试目的
 
 验证现有 `WeChatCustomerRuntimeAdapter` 能在不接触 Gateway 数据库和 Cursor 的情况下，将已持久化的微信客服事件接入 Extension Runtime Gateway。状态：`PASS_EXISTING_ADAPTER_OFFLINE`。

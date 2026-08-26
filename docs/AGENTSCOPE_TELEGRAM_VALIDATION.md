@@ -1,5 +1,7 @@
 # AgentScope Telegram 模拟链路验证
 
+> 战略状态：`LEGACY / FALLBACK / REFERENCE ONLY`。本测试继续保留以保护历史资产和统一消息契约，但不再驱动 Telegram 自定义 Channel 开发；生产使用 QwenPaw v2.1.0 内置 Telegram Channel。
+
 ## 1. 测试目的
 
 本验证确认已迁移的历史 Telegram Adapter 能够进入仓库内统一 Extension Runtime Gateway 链路，并能将统一响应交回既有 Telegram 出站接口。验证属于本地离线模拟，不代表真实 Telegram Bot 或 AgentScope/QwenPaw Runtime 联调。
@@ -96,4 +98,4 @@ python -m unittest tests.runtime.test_telegram_agentscope_flow -v
 - 不连接真实 AgentScope/QwenPaw Runtime，不修改其发现或调用机制。
 - 不修改 Message Model、历史 Bridge、Agent 主循环或 Telegram 业务逻辑。
 
-Fake Transport 记录的 `method=sendMessage`、`chat_id` 和 `text` 仅代表既有 Adapter 的出站边界。真实环境仍需要由受管进程客户端实现 `TelegramBridgeTransport`，并在部署审批后完成凭据注入、网络连通性和真实 DeliveryReceipt 对账。
+Fake Transport 记录的 `method=sendMessage`、`chat_id` 和 `text` 仅代表历史 Adapter 的出站边界。生产验收应在 QwenPaw 内置 Telegram Channel 中完成 Bot Token、代理、Streaming、Typing 和访问控制验证，不再实现或部署自定义 `TelegramBridgeTransport`/`BaseChannel`。

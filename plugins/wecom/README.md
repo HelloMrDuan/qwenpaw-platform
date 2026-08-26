@@ -1,6 +1,8 @@
 # WeCom Historical Bridge
 
-状态：`RECOVERED_SOURCE_ONLY`。该目录只保存历史企业微信 Bridge 源码，尚未注册为 Runtime Plugin。
+> 状态：`LEGACY / FALLBACK / REFERENCE ONLY`。QwenPaw v2.1.0 已提供生产默认的内置企业微信 Channel；禁止继续将历史 Bridge 开发为生产 `BaseChannel` 或自定义 Channel 注册入口。
+
+该目录只保存历史企业微信 Bridge 源码和恢复证据，不替代内置企业微信 Channel，也不作为生产部署候选。
 
 ## 来源与目录纠正
 

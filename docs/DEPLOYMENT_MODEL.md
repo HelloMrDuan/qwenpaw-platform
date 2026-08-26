@@ -4,6 +4,12 @@
 
 `qwenpaw-platform` 是 Extension/Workspace 的开发源仓库，不是 QwenPaw Runtime 本体。
 
+Channel deployment override: QwenPaw v2.1.0 built-in Telegram、企业微信和微信
+Channels are the production default. Repository Telegram/WeCom Adapters,
+Plugins, and Bridges are `LEGACY / FALLBACK / REFERENCE ONLY` and must not be
+deployed as replacements. WeChat Customer remains `CUSTOM / TO VERIFY`; PDF
+Editor remains a custom Skill. See `QWENPAW_CHANNEL_STRATEGY.md`.
+
 部署链路：
 
 ```text

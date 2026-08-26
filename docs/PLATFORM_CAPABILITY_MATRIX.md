@@ -1,5 +1,10 @@
 # QwenPaw Platform 能力矩阵
 
+> Channel strategy update: Telegram、企业微信和微信在 QwenPaw v2.1.0 中为
+> `BUILTIN`，生产默认使用内置 Channel。历史 Telegram/WeCom Adapter、Plugin
+> 与 Bridge 为 `LEGACY / FALLBACK / REFERENCE ONLY`。微信客服是独立的
+> `CUSTOM / TO VERIFY` 链路。详见 `QWENPAW_CHANNEL_STRATEGY.md`。
+
 ## 1. 文档目的
 
 本矩阵记录 `qwenpaw-platform` 当前可证明的能力、Extension 类型、入口、配置、依赖和测试状态，并区分：
@@ -40,11 +45,11 @@
 | 能力 | 类型判断 | 当前状态 | 入口位置 | 配置位置 | 主要依赖 | 测试状态 | 归属 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Console | Channel | 已运行（云端历史）；已配置、当前启用 | 官方 QwenPaw Runtime；仓库无独立入口 | `configs/agent.json` → `channels.console` | QwenPaw/AgentScope Runtime、模型 Provider | 有 `sessions/console/` 历史运行数据；本地 Runtime 未安装，未做当前冒烟 | 已有能力 |
-| Hermes | Plugin + Adapter（外部桥接服务） | 已运行（云端历史）；待开发（源码恢复） | `configs/HEARTBEAT.md` 引用外部 `hermes/start_bridge.sh`；源码不在仓库 | 无独立 Hermes 配置导出；与 Telegram/桥接运行态关联 | Hermes Runtime、QwenPaw、消息平台 API、模型/网络 | 只有历史运行与健康检查入口证据；无仓库源码和自动化测试 | 已有能力，待工程化恢复 |
-| Telegram | Channel；目标实现为 Plugin + Adapter | 已运行（云端历史）；已配置；未启用；待开发（源码恢复） | 历史上通过 Hermes/云端 Channel；`channels/` 当前仅占位 | `configs/agent.json` → `channels.telegram` | Telegram Bot API、bot token、网络/代理、Hermes/QwenPaw | 无仓库内 adapter、启动脚本或 E2E 测试；只有历史桥接证据 | 已有能力，待工程化恢复 |
-| 企业微信机器人 | Channel；目标实现为 Plugin + Adapter | 已运行（云端历史）；已配置；未启用；待开发（源码恢复） | 官方/外部 WeCom Channel；仓库未导出实现 | `configs/agent.json` → `channels.wecom` | 企业微信 WebSocket/API、bot id/secret、QwenPaw Runtime | 无 Channel 源码和自动化测试；配置流式开关当前关闭 | 已有能力，待工程化恢复 |
-| 企业微信客服 Gateway | Plugin + Adapter + Channel Gateway | 已运行（云端历史）；待开发（源码恢复） | `scripts/cleanup_old_gateways.sh`、`scripts/healthcheck_v345_final.sh` 引用外部 `wecom-kf`；实现不在仓库 | `configs/HEARTBEAT.md` 运维入口；凭据在 ignored 本地配置/外部环境 | 企业微信客服 API、callback/轮询、SQLite、Tailscale Funnel、QwenPaw、媒体上传 | `digest/` 有 V1–V3.4.3 验收/runbook；无 Gateway 源码与可执行测试 | 已有能力，待工程化恢复 |
-| 微信机器人 / 微信公众号 Gateway | Channel；目标实现为 Plugin + Adapter | 已运行（云端历史）；已配置；未启用；待开发（源码恢复） | 外部微信公众号 V1/V2 Gateway；`digest/wiki/wechat-mp-48001-passive-reply-bypass.md` 记录入口 | `configs/agent.json` → `channels.wechat`；外部 callback 配置未导出 | 微信公众号 callback/XML、验签、QwenPaw CLI/HTTP API、公共 HTTPS/Tailscale | 只有历史部署与绕过方案文档；无 Gateway 源码、fixture 或 E2E 测试 | 已有能力，待工程化恢复 |
+| Hermes | Plugin + Adapter（外部桥接服务） | `TO VERIFY`；保留历史运行证据 | 恢复源码与历史启动资料 | 与历史 Channel Bridge 相关；生产角色未确认 | Hermes Runtime、模型/网络 | 有离线历史验证；独立生产必要性未证明 | 已有历史能力，待决策 |
+| Telegram | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置 Channel | Runtime Console：Bot Token、代理、Typing、访问控制等 | QwenPaw Runtime、Telegram API | 内置能力由真实 Console 确认；历史 Adapter/Plugin 测试仅作参考 | 已有 Runtime 能力 |
+| 企业微信机器人 | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置企业微信 Channel | Runtime Console：Bot ID、Secret、扫码授权、媒体目录、群聊上下文 | QwenPaw Runtime、企业微信服务 | 内置能力由真实 Console 确认；历史 Adapter/Plugin 测试仅作参考 | 已有 Runtime 能力 |
+| 企业微信客服 Gateway | Plugin + Adapter + Channel Gateway | `CUSTOM / TO VERIFY` | `plugins/wechat-customer/`、`adapters/wechat_customer/` 与历史 Gateway | `open_kfid`、`external_userid`、cursor、Gateway-owned DB | 企业微信客服 API、SQLite、Gateway、QwenPaw | 离线链路测试已存在；与内置微信等价性未证明 | 已有历史能力，待决策 |
+| 微信 | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置微信 Channel | Runtime Console 扫码登录 / Bot Token 配置 | QwenPaw Runtime、微信服务 | 内置入口由真实 Console 确认；需 staging 配置验收 | 已有 Runtime 能力 |
 | 企业微信图片生成链路 | Plugin/Gateway 内嵌能力；目标应拆为 Skill 或 MCP + Adapter | 已运行（云端历史）；待开发（独立 Extension） | 外部 `sn_agent_runner.py` 与 WeCom Gateway；仓库仅有 `digest/procedure/wecom-image-message-pipeline.md` | 外部环境变量与 Gateway 配置，未作为平台 Extension 导出 | 图片生成 Provider、图片压缩、企业微信 media/upload、SQLite、QwenPaw | 历史 runbook 记录压缩、上传、状态机和失败回退验收；无源代码测试 | 已有链路；独立能力属未来规划 |
 
 ### 4.2 已注册 Skills
@@ -86,9 +91,9 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 统一消息模型 | Adapter/Core Contract | 待开发 | 未来 `adapters/message-normalization/` 或平台契约目录 | versioned message schema | JSON Schema/Pydantic 等待实现时选定 | 无实现、无 fixture；Roadmap Phase 2 | 未来规划 |
 | Console 标准 Adapter | Adapter | 待开发 | 未来 `adapters/console/` | Console capability/config overlay | 官方 QwenPaw Console Channel | 无实现；应作为统一消息模型参考测试 | 未来规划 |
-| Telegram Plugin/Adapter 源码化 | Plugin + Adapter + Channel | 待开发（已有云端能力恢复） | 未来 `plugins/telegram-channel/`、`adapters/telegram/` | `configs/agent.json` 兼容 overlay | Telegram API、Hermes/QwenPaw 兼容边界 | 无源码测试；需恢复后建立 E2E | 未来工程化 |
-| 企业微信 Plugin/Adapter 源码化 | Plugin + Adapter + Channel | 待开发（已有云端能力恢复） | 未来 `plugins/wecom-channel/`、`adapters/wecom/` | WeCom 非敏感 schema + Secret reference | WeCom API/WebSocket、Gateway、QwenPaw | 只有历史 runbook；需契约/E2E/回滚测试 | 未来工程化 |
-| 微信机器人 Plugin/Adapter 源码化 | Plugin + Adapter + Channel | 待开发（已有云端能力恢复） | 未来 `plugins/wechat-channel/`、`adapters/wechat/` | WeChat 非敏感 schema + Secret reference | 微信 callback/API、公共 HTTPS、QwenPaw | 只有历史部署文档；需 fixture/E2E | 未来工程化 |
+| Telegram 自定义 Plugin/Adapter | Plugin + Adapter + Channel | `STOPPED`；仅保留 legacy/fallback/reference | 现有恢复目录不再扩展为生产 Channel | 不新增生产配置 | 内置 Telegram Channel | 离线历史测试保留；不新增 BaseChannel 测试 | 非未来规划 |
+| 企业微信自定义 Plugin/Adapter | Plugin + Adapter + Channel | `STOPPED`；仅保留 legacy/fallback/reference | 现有恢复目录不再扩展为生产 Channel | 不新增生产配置 | 内置企业微信 Channel | 离线历史测试保留；不新增 BaseChannel 测试 | 非未来规划 |
+| 微信客服能力核验 | Custom Channel/Gateway decision | `TO VERIFY` | `plugins/wechat-customer/`、`adapters/wechat_customer/` | 只记录 secret 名称与 Gateway 状态边界 | open-kfid API、cursor、DB、去重 | 先核验内置覆盖与回滚语义，不开发新功能 | 待架构决策 |
 | 统一 Response Streaming | Adapter/Core Contract | 待开发 | 未来 response event/Channel renderer 适配层 | stream capability 与 fallback schema | QwenPaw Runtime event boundary、各 Channel 能力 | 无实现；Roadmap Phase 3 | 未来规划 |
 | OCR 独立能力 | Skill，必要时组合 MCP/Provider Adapter | 待开发 | 未来 `skills/ocr/` | Skill 注册 + OCR Provider/语言包配置 | Tesseract 或云 OCR、Poppler、语言模型/版面分析 | 通用 PDF 文档有 OCR 说明，但无独立 Skill、schema 或基准集 | 未来规划 |
 | 独立图片生成 | Skill + MCP 或 Provider Plugin + Artifact Adapter | 待开发 | 未来 `skills/image-generation/`，可配 `mcp/`/`plugins/` | Provider credential reference、模型/尺寸策略 | 图片生成 Provider、存储、内容安全、Channel artifact 支持 | 只有企业微信历史内嵌链路；无独立实现测试 | 未来规划 |
@@ -115,7 +120,8 @@
 
 - 统一消息模型与 Channel Adapters；
 - 统一 Response Streaming；
-- Telegram、企业微信、微信 Channel 的 Plugin/Adapter 源码化；
+- Telegram、企业微信、微信使用内置 Channel；不再规划重复的生产 Plugin/Adapter；
+- 微信客服独立能力核验与架构决策；
 - 独立 OCR、图片生成和视频生成能力；
 - MCP 标准目录与版本锁定；
 - Extension 自动化测试门禁和 Cloud staging 验收。
@@ -124,7 +130,7 @@ Word、Excel、PPT 并非“完全不存在”：仓库已经有 `docx`、`xlsx`
 
 ## 7. 当前关键缺口
 
-1. Hermes、Telegram、WeCom/微信 Gateway 源码和不可变发布制品未随 Workspace export 提供。
+1. Hermes 的独立生产角色、微信客服与内置微信的能力边界仍未完成验证。
 2. `channels/` 没有实现，`plugins/`、`adapters/`、`mcp/` 目标目录尚未进入渐进迁移。
 3. 除 PDF Editor 回归脚本外，现有 Skills 普遍没有专属测试目录。
 4. Tavily MCP 使用 `@latest` 且未启用，不满足生产版本锁定要求。
