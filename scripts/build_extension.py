@@ -278,6 +278,7 @@ def build_qwenpaw_plugin(
         str(plugin_manifest["meta"]["extension"]["adapter_entrypoint"])
     )
     packaged_adapter_relative = PurePosixPath("adapter", *adapter_relative.parts[1:])
+    package_namespace = _qwenpaw_plugin_namespace(str(plugin_manifest["id"]))
 
     sources: dict[str, Path] = {}
 
@@ -297,7 +298,7 @@ def build_qwenpaw_plugin(
 
     for source in collect_package_files(plugin_root):
         relative = source.relative_to(plugin_root).as_posix()
-        if relative != "plugin.json":
+        if relative not in {"plugin.json", "plugin.py"}:
             add_source(relative, source)
 
     for source_root_name in QWENPAW_PLUGIN_SHARED_CORE_ROOTS:
@@ -394,6 +395,45 @@ def build_qwenpaw_plugin(
         "runtime/__init__.py": b'"""Packaged official Plugin runtime wrapper."""\n',
         "scripts/__init__.py": b'"""Packaged lifecycle support modules."""\n',
     }
+    plugin_entry = plugin_root / "plugin.py"
+    generated_files["plugin.py"] = _render_qwenpaw_plugin_entry(
+        plugin_entry.read_text(encoding="utf-8"),
+        package_namespace=package_namespace,
+    ).encode("utf-8")
+
+    # Keep the official compatibility layout at the archive root while loading
+    # executable Python dependencies from a per-Plugin namespace. QwenPaw loads
+    # multiple backend entries in one interpreter, so generic top-level package
+    # names such as ``adapter`` and ``runtime`` cannot safely identify a Plugin.
+    namespace_prefixes = (
+        "adapter/",
+        "contracts/",
+        "core/",
+        "runtime/",
+        "schemas/",
+        "scripts/",
+    )
+    generated_files[f"{package_namespace}/__init__.py"] = (
+        f'"""Private runtime namespace for {plugin_manifest["id"]}."""\n'
+    ).encode("utf-8")
+    for target, source in sorted(sources.items()):
+        if not target.startswith(namespace_prefixes):
+            continue
+        namespaced_target = f"{package_namespace}/{target}"
+        content = source.read_bytes()
+        if source.suffix.lower() == ".py":
+            content = _rewrite_namespaced_python(
+                content.decode("utf-8"),
+                package_namespace=package_namespace,
+            ).encode("utf-8")
+        generated_files[namespaced_target] = content
+    for target, content in tuple(generated_files.items()):
+        if not target.startswith(namespace_prefixes):
+            continue
+        namespaced_target = f"{package_namespace}/{target}"
+        if namespaced_target in generated_files:
+            continue
+        generated_files[namespaced_target] = content
     collisions = sorted(set(generated_files).intersection(sources))
     if collisions:
         raise ExtensionPackagingError(
@@ -411,7 +451,17 @@ def build_qwenpaw_plugin(
             compresslevel=9,
         ) as package:
             for target, source in sorted(sources.items()):
-                _write_source_file(package, source, target)
+                if target.startswith("scripts/") and source.suffix.lower() == ".py":
+                    _write_bytes(
+                        package,
+                        target,
+                        _remove_repository_path_injection(
+                            source.read_text(encoding="utf-8")
+                        ).encode("utf-8"),
+                        executable=_is_executable_source(source),
+                    )
+                else:
+                    _write_source_file(package, source, target)
             for target, content in sorted(generated_files.items()):
                 _write_bytes(package, target, content)
         temporary_archive.replace(archive)
@@ -432,6 +482,100 @@ def build_qwenpaw_plugin(
         sha256=digest,
         source_file_count=len(sources) + len(generated_files),
     )
+
+
+def _qwenpaw_plugin_namespace(plugin_id: str) -> str:
+    """Return a deterministic, import-safe namespace for one official Plugin."""
+
+    normalized = re.sub(r"[^a-z0-9]+", "_", plugin_id.lower()).strip("_")
+    if not normalized:
+        raise ExtensionPackagingError("official Plugin id has no namespace value")
+    return f"qwenpaw_plugin_{normalized}"
+
+
+def _remove_repository_path_injection(source: str) -> str:
+    """Remove repository-root ``sys.path`` mutations from release-only code."""
+
+    pattern = re.compile(
+        r"(?m)^(?P<indent>[ \t]*)if str\((?P<root>[A-Z_]+)\) not in sys\.path:\r?\n"
+        r"(?P=indent)[ \t]+sys\.path\.insert\(0, str\((?P=root)\)\)\r?\n"
+    )
+    return pattern.sub("", source)
+
+
+def _rewrite_namespaced_python(source: str, *, package_namespace: str) -> str:
+    """Rewrite bundled internal imports into one Plugin-private namespace."""
+
+    rewritten = _remove_repository_path_injection(source)
+    for package_name in ("adapter", "contracts", "core", "runtime", "scripts"):
+        rewritten = re.sub(
+            rf"(?m)^(?P<indent>[ \t]*)from {package_name}(?=\.|\s+import)",
+            rf"\g<indent>from {package_namespace}.{package_name}",
+            rewritten,
+        )
+        rewritten = re.sub(
+            rf"(?m)^(?P<indent>[ \t]*)import {package_name}(?=\.|\s|$)",
+            rf"\g<indent>import {package_namespace}.{package_name}",
+            rewritten,
+        )
+    return rewritten
+
+
+def _render_qwenpaw_plugin_entry(
+    source: str,
+    *,
+    package_namespace: str,
+) -> str:
+    """Render a self-contained backend entry without global import-path hacks."""
+
+    rewritten = _rewrite_namespaced_python(
+        source,
+        package_namespace=package_namespace,
+    )
+    anchor = "SELF_CONTAINED = PACKAGED_ADAPTER_PATH.is_file() and PACKAGED_WRAPPER_PATH.is_file()\n"
+    if anchor not in rewritten:
+        raise ExtensionPackagingError(
+            "official Plugin entry is missing the self-contained package anchor"
+        )
+    bootstrap = f'''\nPACKAGED_NAMESPACE = "{package_namespace}"
+
+
+def _load_packaged_namespace() -> None:
+    """Load this Plugin's private package without mutating ``sys.path``."""
+
+    namespace_root = PLUGIN_ROOT / PACKAGED_NAMESPACE
+    namespace_init = namespace_root / "__init__.py"
+    existing = sys.modules.get(PACKAGED_NAMESPACE)
+    if existing is not None:
+        existing_file = Path(getattr(existing, "__file__", "")).resolve()
+        if existing_file != namespace_init.resolve():
+            raise RuntimeError(
+                f"Plugin namespace collision: {{PACKAGED_NAMESPACE}}"
+            )
+        return
+    spec = importlib.util.spec_from_file_location(
+        PACKAGED_NAMESPACE,
+        namespace_init,
+        submodule_search_locations=[str(namespace_root)],
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load Plugin namespace: {{namespace_init}}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[PACKAGED_NAMESPACE] = module
+    spec.loader.exec_module(module)
+'''
+    rewritten = rewritten.replace(anchor, anchor + bootstrap, 1)
+    branch_anchor = "if SELF_CONTAINED:\n    REPOSITORY_ROOT = PLUGIN_ROOT\n"
+    if branch_anchor not in rewritten:
+        raise ExtensionPackagingError(
+            "official Plugin entry is missing the packaged execution branch"
+        )
+    rewritten = rewritten.replace(
+        branch_anchor,
+        branch_anchor + "    _load_packaged_namespace()\n",
+        1,
+    )
+    return rewritten
 
 
 def build_qwenpaw_plugins(

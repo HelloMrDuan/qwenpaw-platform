@@ -214,3 +214,275 @@ Without changing historical provider logic, a later implementation phase must:
 
 No production or cloud installation should occur before these blockers are
 closed.
+
+## 10. Phase 12.7 real QwenPaw v2.1.0 feedback
+
+The following results supersede the earlier `RUNTIME INSTALL NOT EXECUTED`
+statement for these exact Phase 12.6 candidates. They were supplied from a real
+AgentScope/QwenPaw v2.1.0 tenant on 2026-08-26:
+
+| Plugin | Real installation | Runtime status | Evidence |
+| --- | --- | --- | --- |
+| Telegram | **REAL INSTALL PASS** | **STATUS RUNNING** | Installed package is visible in the Plugin list |
+| WeCom | **REAL INSTALL FAIL** | Not started | `No module named 'adapter.wecom'` |
+| WeChat Customer | **REAL INSTALL FAIL** | Not started | `No module named 'adapter.wechat_customer'` |
+
+No secret, external API call, historical Bridge startup, or Gateway startup was
+used by the local namespace investigation.
+
+## 11. Phase 12.6 ZIP comparison and root cause
+
+The three Phase 12.6 ZIPs were opened and fully enumerated before rebuilding the
+failed artifacts. All three contained `adapter/__init__.py`, the exact Python
+module directory, its `__init__.py`, and `runtime.py`. In particular, WeChat
+Customer used the correct underscore module name `wechat_customer`, not the
+release-name spelling `wechat-customer`.
+
+The decisive reproduction loaded the three entries sequentially in one Python
+interpreter. Telegram passed, then WeCom and WeChat Customer failed with the
+same two QwenPaw errors. After Telegram loaded, `sys.modules['adapter'].__path__`
+contained only Telegram's extracted `adapter/` directory. Python reuses a
+cached regular package before considering later `sys.path` entries, so each
+later `sys.path.insert` could not change where `adapter.<channel>` was searched.
+
+Therefore the root cause was a **process-global top-level Python package
+collision**, not directory flattening, a missing `__init__.py`, a channel-name
+conversion, or an absent Adapter source.
+
+### 11.1 Telegram candidate tree (installed successfully)
+
+```text
+README.md
+adapter/__init__.py
+adapter/telegram/__init__.py
+adapter/telegram/runtime.py
+adapters/telegram/manifest.yaml
+adapters/telegram/recovered/telegram_bridge_main.py
+contracts/__init__.py
+contracts/artifact.py
+contracts/channel.py
+contracts/message.py
+contracts/skill.py
+contracts/stream_consumer.py
+contracts/stream_renderer.py
+contracts/streaming.py
+core/__init__.py
+core/contracts/__init__.py
+core/contracts/artifact.py
+core/contracts/channel.py
+core/contracts/message.py
+core/contracts/skill.py
+core/contracts/stream_consumer.py
+core/contracts/stream_renderer.py
+core/contracts/streaming.py
+core/extensions/README.md
+core/extensions/__init__.py
+core/extensions/lifecycle/__init__.py
+core/extensions/lifecycle/health.py
+core/extensions/lifecycle/manager.py
+core/extensions/lifecycle/models.py
+core/extensions/loader.py
+core/extensions/models.py
+core/extensions/observability/__init__.py
+core/extensions/observability/health_store.py
+core/extensions/observability/metrics.py
+core/extensions/observability/models.py
+core/extensions/observability/trace.py
+core/extensions/registry.py
+core/extensions/runtime/__init__.py
+core/extensions/runtime/context.py
+core/extensions/runtime/executor_bridge.py
+core/extensions/runtime/gateway.py
+core/extensions/runtime/models.py
+core/extensions/runtime/plugin_bridge.py
+core/extensions/runtime/skill_invoker.py
+core/streaming/README.md
+core/streaming/__init__.py
+core/streaming/collector.py
+core/streaming/dispatcher.py
+core/streaming/replay.py
+plugin.json
+plugin.py
+runtime/__init__.py
+runtime/wrapper.py
+schemas/extension-manifest.schema.json
+scripts/__init__.py
+scripts/build_extension.py
+scripts/deploy_extension.py
+scripts/rollback_extension.py
+scripts/verify_extension.py
+```
+
+### 11.2 WeCom candidate tree (failed in real Runtime)
+
+```text
+README.md
+adapter/__init__.py
+adapter/wecom/__init__.py
+adapter/wecom/runtime.py
+contracts/__init__.py
+contracts/artifact.py
+contracts/channel.py
+contracts/message.py
+contracts/skill.py
+contracts/stream_consumer.py
+contracts/stream_renderer.py
+contracts/streaming.py
+core/__init__.py
+core/contracts/__init__.py
+core/contracts/artifact.py
+core/contracts/channel.py
+core/contracts/message.py
+core/contracts/skill.py
+core/contracts/stream_consumer.py
+core/contracts/stream_renderer.py
+core/contracts/streaming.py
+core/extensions/README.md
+core/extensions/__init__.py
+core/extensions/lifecycle/__init__.py
+core/extensions/lifecycle/health.py
+core/extensions/lifecycle/manager.py
+core/extensions/lifecycle/models.py
+core/extensions/loader.py
+core/extensions/models.py
+core/extensions/observability/__init__.py
+core/extensions/observability/health_store.py
+core/extensions/observability/metrics.py
+core/extensions/observability/models.py
+core/extensions/observability/trace.py
+core/extensions/registry.py
+core/extensions/runtime/__init__.py
+core/extensions/runtime/context.py
+core/extensions/runtime/executor_bridge.py
+core/extensions/runtime/gateway.py
+core/extensions/runtime/models.py
+core/extensions/runtime/plugin_bridge.py
+core/extensions/runtime/skill_invoker.py
+core/streaming/README.md
+core/streaming/__init__.py
+core/streaming/collector.py
+core/streaming/dispatcher.py
+core/streaming/replay.py
+plugin.json
+plugin.py
+plugins/wecom/manifest.yaml
+plugins/wecom/recovered/wecom-node/wecom_bridge.mjs
+runtime/__init__.py
+runtime/wrapper.py
+schemas/extension-manifest.schema.json
+scripts/__init__.py
+scripts/build_extension.py
+scripts/deploy_extension.py
+scripts/rollback_extension.py
+scripts/verify_extension.py
+```
+
+### 11.3 WeChat Customer candidate tree (failed in real Runtime)
+
+```text
+README.md
+adapter/__init__.py
+adapter/wechat_customer/__init__.py
+adapter/wechat_customer/runtime.py
+contracts/__init__.py
+contracts/artifact.py
+contracts/channel.py
+contracts/message.py
+contracts/skill.py
+contracts/stream_consumer.py
+contracts/stream_renderer.py
+contracts/streaming.py
+core/__init__.py
+core/contracts/__init__.py
+core/contracts/artifact.py
+core/contracts/channel.py
+core/contracts/message.py
+core/contracts/skill.py
+core/contracts/stream_consumer.py
+core/contracts/stream_renderer.py
+core/contracts/streaming.py
+core/extensions/README.md
+core/extensions/__init__.py
+core/extensions/lifecycle/__init__.py
+core/extensions/lifecycle/health.py
+core/extensions/lifecycle/manager.py
+core/extensions/lifecycle/models.py
+core/extensions/loader.py
+core/extensions/models.py
+core/extensions/observability/__init__.py
+core/extensions/observability/health_store.py
+core/extensions/observability/metrics.py
+core/extensions/observability/models.py
+core/extensions/observability/trace.py
+core/extensions/registry.py
+core/extensions/runtime/__init__.py
+core/extensions/runtime/context.py
+core/extensions/runtime/executor_bridge.py
+core/extensions/runtime/gateway.py
+core/extensions/runtime/models.py
+core/extensions/runtime/plugin_bridge.py
+core/extensions/runtime/skill_invoker.py
+core/streaming/README.md
+core/streaming/__init__.py
+core/streaming/collector.py
+core/streaming/dispatcher.py
+core/streaming/replay.py
+plugin.json
+plugin.py
+plugins/wechat-customer/manifest.yaml
+plugins/wechat-customer/recovered/wecom_kf_gateway_v345.py
+runtime/__init__.py
+runtime/wrapper.py
+schemas/extension-manifest.schema.json
+scripts/__init__.py
+scripts/build_extension.py
+scripts/deploy_extension.py
+scripts/rollback_extension.py
+scripts/verify_extension.py
+```
+
+## 12. Phase 12.7.1 namespace correction
+
+`build_qwenpaw_plugin()` now derives a private import package from each official
+Plugin id, for example:
+
+```text
+qwenpaw_plugin_wecom_extension_channel.adapter.wecom.runtime
+qwenpaw_plugin_wechat_customer_extension_channel.adapter.wechat_customer.runtime
+```
+
+The release entry explicitly loads that package from its own extracted
+directory with `importlib` package metadata and does not mutate `sys.path`.
+Bundled internal imports are mechanically rewritten into the same private
+namespace. The compatibility paths `adapter/wecom/` and
+`adapter/wechat_customer/` remain present and directly importable in a clean
+ZIP-only environment. No checked-in Adapter, historical Bridge/Gateway, or
+Extension Runtime Gateway business source was changed.
+
+Corrected release artifacts:
+
+| Package | SHA256 | Offline status |
+| --- | --- | --- |
+| `wecom-extension-channel-v0.1.0-recovered.zip` | `cc934244a12dddec2b82094d75ea8323eec051a345aa7c7cafcbdc96c5d235e6` | Isolated entry/import PASS |
+| `wechat-customer-extension-channel-v0.1.0-recovered.zip` | `e9d14de62760aa06abfa0110ce5ed358c670d53a70b2e561bf94de6464a4f2e6` | Isolated entry/import PASS |
+
+The already successful Telegram artifact was not regenerated. Its SHA256
+remains `fefbc537abd3f79b886564c5567230a8ab36d2d0a01a16dbe7c41a8f27d0fc9d`.
+The generic builder will use a private namespace if Telegram is rebuilt in a
+future release, but this correction does not alter the validated Telegram ZIP.
+
+Acceptance now covers both failure modes that Phase 12.6 missed:
+
+1. each ZIP is extracted separately, with no repository root in `PYTHONPATH`;
+   direct `import adapter.<channel>` and the official `plugin.py` entry pass;
+2. Telegram, WeCom, and WeChat Customer entries load sequentially in one
+   isolated Python process, and each Adapter resolves from its unique package;
+3. no Python file in a generated release contains `sys.path.insert`.
+
+Repository acceptance result: **114/114 tests PASS** using the locked local
+development environment (`.venv`). The same-process namespace probe and the
+three direct ZIP-only import probes are included in that total.
+
+The corrected WeCom and WeChat Customer ZIPs still require a second real
+AgentScope/QwenPaw installation attempt. Their status is **OFFLINE NAMESPACE
+FIX VALIDATED / REAL REINSTALL PENDING**.

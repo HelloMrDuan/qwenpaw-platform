@@ -53,16 +53,24 @@ Self-contained official Plugin ZIP
 │   └── streaming/
 ├── schemas/
 ├── scripts/
+├── qwenpaw_plugin_<plugin_id>/
+│   ├── adapter/<channel>/
+│   ├── core/
+│   ├── runtime/
+│   ├── schemas/
+│   └── scripts/
 └── adapters/ or plugins/
     └── <internal-extension>/
         ├── manifest.yaml
         └── declared entrypoint
 ```
 
-The top-level `contracts/` directory is the explicit Plugin contract payload.
-The mirrored `core/contracts/` path preserves the existing imports used by the
-unchanged Adapter and Runtime code. This deliberate duplication avoids a
-mechanical rewrite of business modules.
+The top-level `adapter/`, `contracts/`, `core/`, and `runtime/` paths preserve
+the official compatibility layout and allow a clean extraction root to import
+`adapter.<channel>`. Executable Plugin dependencies are additionally assembled
+under the deterministic private namespace `qwenpaw_plugin_<plugin_id>`. This is
+required because QwenPaw can load multiple backend Plugins in one interpreter;
+top-level names such as `adapter`, `runtime`, and `core` are process-global.
 
 ## 3. Dependency collection rules
 
@@ -97,13 +105,17 @@ exist beside the official entry.
 
 ```text
 plugin.py
-  -> from adapter.<channel>.runtime import ...
-  -> from runtime.wrapper import OfficialPluginRuntimeWrapper
+  -> explicitly loads qwenpaw_plugin_<plugin_id> from this extraction root
+  -> from qwenpaw_plugin_<plugin_id>.adapter.<channel>.runtime import ...
+  -> from qwenpaw_plugin_<plugin_id>.runtime.wrapper import ...
   -> repository root = extracted Plugin root
 ```
 
-The packaged entry does not use `from adapters.xxx`. It adds only its extracted
-Plugin root to the import path.
+The packaged entry does not use `from adapters.xxx` and does not mutate
+`sys.path`. It loads its private package with an explicit package location and
+submodule search location. The builder mechanically rewrites only bundled
+internal import statements; checked-in Adapter, Bridge, Gateway, and Runtime
+Gateway business sources remain unchanged.
 
 ### Source development mode
 
@@ -183,8 +195,11 @@ isolated mode (`-I`). The validation requires:
 - repository root is not injected into `sys.path`;
 - `plugin.py` imports successfully;
 - `SELF_CONTAINED=true`;
-- Adapter module resolves from `adapter.<channel>`;
-- wrapper resolves from `runtime.wrapper`;
+- Plugin Adapter and wrapper resolve from the Plugin-private namespace;
+- direct compatibility import `adapter.<channel>` succeeds in a clean process;
+- Telegram, WeCom, and WeChat Customer entries load sequentially in one
+  isolated process without sharing a top-level `adapter` package;
+- no released Python file contains `sys.path.insert`;
 - internal Manifest loads through `ExtensionRegistry`;
 - version and Extension identity match;
 - cache, database, log, token, and credential files are absent;
@@ -216,3 +231,17 @@ a target-version-compatible QwenPaw `BaseChannel` facade and
 
 No real AgentScope/QwenPaw installation, secret injection, provider API call,
 Bridge startup, or Gateway startup is performed here.
+
+## 10. Phase 12.7.1 namespace correction
+
+Real QwenPaw v2.1.0 installation proved that Phase 12.6's one-process-per-ZIP
+test was incomplete. Telegram loaded first and cached the regular package
+`adapter` with a `__path__` pointing only at the Telegram extraction. Later
+imports of `adapter.wecom` and `adapter.wechat_customer` therefore failed even
+though both directories and their `__init__.py` files existed in the ZIPs.
+
+Phase 12.7.1 moves executable imports to per-Plugin namespaces and strengthens
+the acceptance probe to load all three entries sequentially in one isolated
+interpreter. The currently installed Telegram candidate is not rebuilt or
+changed; the generic builder applies private namespaces to future builds, while
+the corrected WeCom and WeChat Customer artifacts use the new layout now.
