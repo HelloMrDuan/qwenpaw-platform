@@ -11,9 +11,9 @@
 | Telegram | `BUILTIN` | Configure and accept the QwenPaw v2.1.0 built-in Channel |
 | WeCom / 企业微信 | `BUILTIN` | Configure and accept the QwenPaw v2.1.0 built-in Channel |
 | WeChat / 微信 | `BUILTIN` | Configure and accept the QwenPaw v2.1.0 built-in Channel |
-| WeChat Customer / 微信客服 | `CUSTOM / TO VERIFY` | Preserve the historical Gateway boundary and verify whether a custom integration is still required |
+| WeChat Customer / 微信客服 | `CUSTOM REQUIRED` | Preserve a separate open-kfid Gateway/Adapter boundary if this business capability is retained |
 | PDF Editor | `CUSTOM SKILL` | Continue using the versioned Skill release and Workspace upload path |
-| Hermes | `TO VERIFY` | Retain recovered assets until its independent production role is proven |
+| Hermes | `PARTIAL KEEP` | Preserve selected orchestration/session modules as reference; do not deploy a competing Runtime |
 
 This table is the default production-routing decision. Earlier documents that
 describe Telegram or WeCom custom `BaseChannel` implementation as a future step
@@ -97,10 +97,12 @@ QwenPaw's built-in “微信” entry must not be assumed equivalent to the hist
 - message deduplication, retry, and delivery state.
 
 These semantics differ from a QR-code login/Bot Token personal or bot Channel.
-Accordingly, WeChat Customer remains `CUSTOM / TO VERIFY`; it is not redirected
-to built-in 微信 until evidence proves functional equivalence.
+The Phase 13 source and exported-configuration audit found no built-in evidence
+for those semantics. Accordingly, WeChat Customer is `CUSTOM REQUIRED` if this
+business capability is retained; it is not redirected to built-in 微信.
 
-Verification must answer, without starting production services:
+Any future implementation phase must still answer, without risking production
+state:
 
 1. whether QwenPaw v2.1.0 exposes an official 微信客服/open-kfid Channel;
 2. whether it preserves cursor, deduplication, session, and delivery semantics;
@@ -108,8 +110,9 @@ Verification must answer, without starting production services:
 4. whether a supported Plugin/API boundary exists if built-in coverage is absent;
 5. whether staging rollback can preserve cursor and prevent duplicate delivery.
 
-Until those questions are closed, no new WeChat Customer business logic or
-Gateway replacement is authorized.
+This fit-gap decision does not authorize new WeChat Customer business logic,
+`BaseChannel`, Plugin, or Gateway replacement. Detailed evidence is in
+`WECHAT_CUSTOMER_FIT_GAP_ANALYSIS.md`.
 
 ## 6. Deployment policy
 
@@ -120,9 +123,9 @@ Telegram / WeCom / WeChat
         -> production enablement
 
 WeChat Customer
-        -> capability verification
-        -> architecture decision
-        -> only then consider custom deployment
+        -> CUSTOM REQUIRED business boundary
+        -> recovery/readiness and staging verification
+        -> only then consider an explicitly authorized custom deployment
 
 PDF Editor
         -> custom Skill package
