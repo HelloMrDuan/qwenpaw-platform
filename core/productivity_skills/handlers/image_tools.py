@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+import re
 from typing import Any, Mapping
 
 from ..artifacts import artifact, safe_output_path
@@ -318,17 +319,42 @@ def _quality(request: dict[str, Any]) -> dict[str, Any]:
     source, image = loaded
     resolver = CapabilityResolver()
     capabilities = resolver.resolve_many(("pillow", "opencv", "realesrgan"))
+    operation = str(request.get("operation") or "enhance").lower()
+    operation_scale = re.fullmatch(r"upscale_([24])x", operation)
+    requested_value = request.get("upscale", request.get("scale"))
+    if requested_value is None:
+        requested_value = operation_scale.group(1) if operation_scale else 1
+    try:
+        requested_scale = int(requested_value)
+    except (TypeError, ValueError):
+        image.close()
+        return invalid("upscale must be 1, 2 or 4")
+    if requested_scale not in {1, 2, 4}:
+        image.close()
+        return invalid("upscale must be 1, 2 or 4")
     ai = bool(request.get("ai"))
     if ai:
         image.close()
-        return result(SkillStatus.MODEL_RUNTIME_REQUIRED, "AI super-resolution requires an injected Real-ESRGAN Runtime adapter", error_code="MODEL_RUNTIME_REQUIRED", capabilities=capabilities)
+        return result(
+            SkillStatus.MODEL_RUNTIME_REQUIRED,
+            "AI super-resolution requires an injected Real-ESRGAN Runtime adapter",
+            data={
+                "requested_scale": requested_scale,
+                "actual_scale": 1,
+                "mode": "unavailable",
+                "missing_capability": "realesrgan",
+            },
+            error_code="MODEL_RUNTIME_REQUIRED",
+            capabilities=capabilities,
+        )
     try:
         changed = image.convert("RGB")
-        factor = int(request.get("upscale", 1))
-        if factor not in {1, 2, 4}:
-            return invalid("upscale must be 1, 2 or 4")
-        if factor > 1:
-            changed = changed.resize((changed.width * factor, changed.height * factor), Image.Resampling.LANCZOS)
+        source_width, source_height = changed.size
+        if requested_scale > 1:
+            changed = changed.resize(
+                (changed.width * requested_scale, changed.height * requested_scale),
+                Image.Resampling.LANCZOS,
+            )
         changed = changed.filter(ImageFilter.MedianFilter(size=3))
         changed = changed.filter(ImageFilter.UnsharpMask(radius=1.5, percent=int(request.get("sharpen", 125)), threshold=3))
         changed = ImageEnhance.Contrast(changed).enhance(float(request.get("contrast", 1.05)))
@@ -344,7 +370,46 @@ def _quality(request: dict[str, Any]) -> dict[str, Any]:
         balanced = [channel.point(lambda value, scale=target / max(mean, 1): max(0, min(255, round(value * scale)))) for channel, mean in zip(channels, means)]
         changed = Image.merge("RGB", balanced)
         output, item = _save(changed, request, source, "quality-enhanced")
-        return result(SkillStatus.SUCCESS, "Image quality enhancement completed", data={"output": output.name, "upscale": factor, "mode": "traditional"}, artifacts=[item], capabilities=capabilities)
+        width_scale = changed.width / source_width
+        height_scale = changed.height / source_height
+        measured_scale = min(width_scale, height_scale)
+        actual_scale: int | float = (
+            int(round(measured_scale))
+            if abs(measured_scale - round(measured_scale)) < 1e-9
+            else round(measured_scale, 4)
+        )
+        scale_reached = measured_scale + 1e-9 >= requested_scale
+        missing_capability = (
+            None
+            if scale_reached
+            else "realesrgan"
+            if not capabilities["realesrgan"]["available"]
+            else "realesrgan_runtime_adapter"
+        )
+        data = {
+            "output": output.name,
+            "upscale": actual_scale,
+            "requested_scale": requested_scale,
+            "actual_scale": actual_scale,
+            "mode": "traditional",
+            "missing_capability": missing_capability,
+        }
+        if not scale_reached:
+            return result(
+                SkillStatus.PARTIAL_SUCCESS,
+                f"Image enhancement completed, but requested {requested_scale}x upscale was not achieved",
+                data=data,
+                artifacts=[item],
+                error_code="REQUESTED_SCALE_NOT_ACHIEVED",
+                capabilities=capabilities,
+            )
+        return result(
+            SkillStatus.SUCCESS,
+            "Image quality enhancement completed",
+            data=data,
+            artifacts=[item],
+            capabilities=capabilities,
+        )
     finally:
         image.close()
 

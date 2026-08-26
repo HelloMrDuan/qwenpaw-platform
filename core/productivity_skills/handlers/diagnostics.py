@@ -62,6 +62,278 @@ def _format_sql(sql: str) -> str:
     return output.strip()
 
 
+AGGREGATE_FUNCTIONS = (
+    "AVG",
+    "COUNT",
+    "LISTAGG",
+    "MAX",
+    "MEDIAN",
+    "MIN",
+    "STDDEV",
+    "SUM",
+    "VARIANCE",
+)
+
+
+def _top_level_mask(sql: str) -> str:
+    """Keep top-level SQL text while masking strings and parenthesized bodies."""
+    output = list(sql)
+    depth = 0
+    quote = None
+    index = 0
+    while index < len(sql):
+        char = sql[index]
+        if quote:
+            output[index] = " "
+            if char == quote:
+                if index + 1 < len(sql) and sql[index + 1] == quote:
+                    output[index + 1] = " "
+                    index += 1
+                else:
+                    quote = None
+        elif char in {"'", '"'}:
+            quote = char
+            output[index] = " "
+        elif char == "(":
+            depth += 1
+            output[index] = " "
+        elif char == ")":
+            output[index] = " "
+            depth = max(0, depth - 1)
+        elif depth:
+            output[index] = " "
+        index += 1
+    return "".join(output)
+
+
+def _clause(sql: str, start: str, ends: tuple[str, ...]) -> str:
+    mask = _top_level_mask(sql)
+    match = re.search(start, mask, re.I)
+    if not match:
+        return ""
+    end = len(sql)
+    for pattern in ends:
+        candidate = re.search(pattern, mask[match.end() :], re.I)
+        if candidate:
+            end = min(end, match.end() + candidate.start())
+    return sql[match.end() : end].strip().rstrip(";").strip()
+
+
+def _split_sql_list(value: str) -> list[str]:
+    items = []
+    start = 0
+    depth = 0
+    quote = None
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if quote:
+            if char == quote:
+                if index + 1 < len(value) and value[index + 1] == quote:
+                    index += 1
+                else:
+                    quote = None
+        elif char in {"'", '"'}:
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(0, depth - 1)
+        elif char == "," and depth == 0:
+            items.append(value[start:index].strip())
+            start = index + 1
+        index += 1
+    tail = value[start:].strip()
+    if tail:
+        items.append(tail)
+    return items
+
+
+def _strip_select_alias(expression: str) -> tuple[str, str | None]:
+    expression = expression.strip()
+    explicit = re.match(r'(?is)^(.*?)\s+AS\s+("?[A-Za-z_]\w*"?)$', expression)
+    if explicit:
+        return explicit.group(1).strip(), explicit.group(2).strip('"')
+    implicit = re.match(
+        r'(?is)^((?:[A-Za-z_][\w$#]*\.)?[A-Za-z_][\w$#]*|.*\))\s+("?[A-Za-z_]\w*"?)$',
+        expression,
+    )
+    if implicit:
+        return implicit.group(1).strip(), implicit.group(2).strip('"')
+    return expression, None
+
+
+def _normalize_expression(expression: str) -> str:
+    expression = re.sub(r"\s+NULLS\s+(?:FIRST|LAST)\s*$", "", expression, flags=re.I)
+    expression = re.sub(r"\s+(?:ASC|DESC)\s*$", "", expression, flags=re.I)
+    return re.sub(r"\s+", "", expression.strip().rstrip(";")).upper()
+
+
+def _is_constant_expression(expression: str) -> bool:
+    value = expression.strip()
+    return bool(
+        re.fullmatch(r"(?:[-+]?\d+(?:\.\d+)?|'(?:''|[^'])*'|NULL|:[A-Za-z_]\w*)", value, re.I)
+    )
+
+
+def _contains_aggregate(expression: str) -> bool:
+    names = "|".join(AGGREGATE_FUNCTIONS)
+    return bool(re.search(rf"\b(?:{names})\s*\(", expression, re.I))
+
+
+def _without_aggregate_calls(expression: str) -> str:
+    """Mask aggregate function calls so remaining column references can be checked."""
+    names = "|".join(AGGREGATE_FUNCTIONS)
+    output = list(expression)
+    for match in list(re.finditer(rf"\b(?:{names})\s*\(", expression, re.I)):
+        depth = 1
+        index = match.end()
+        quote = None
+        while index < len(expression) and depth:
+            char = expression[index]
+            if quote:
+                if char == quote:
+                    quote = None
+            elif char in {"'", '"'}:
+                quote = char
+            elif char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+            index += 1
+        for position in range(match.start(), index):
+            output[position] = " "
+    return "".join(output)
+
+
+def _recommended_group_by(sql: str, missing: list[str]) -> str:
+    additions = ", ".join(missing)
+    group_pattern = re.compile(
+        r"(\bGROUP\s+BY\s+)(.*?)(?=\bHAVING\b|\bORDER\s+BY\b|\bFETCH\b|\bOFFSET\b|;?\s*$)",
+        re.I | re.S,
+    )
+    if group_pattern.search(sql):
+        return group_pattern.sub(
+            lambda match: match.group(1) + match.group(2).strip().rstrip(";") + ", " + additions + " ",
+            sql,
+            count=1,
+        ).strip()
+    insertion = re.search(r"\b(?:HAVING|ORDER\s+BY|FETCH|OFFSET)\b|;\s*$", sql, re.I)
+    position = insertion.start() if insertion else len(sql)
+    return (sql[:position].rstrip() + " GROUP BY " + additions + " " + sql[position:].lstrip()).strip()
+
+
+def _sql_semantic_findings(sql: str) -> tuple[list[dict[str, str]], str]:
+    select_clause = _clause(sql, r"\bSELECT\b", (r"\bFROM\b",))
+    if not select_clause:
+        return [], sql
+    distinct = bool(re.match(r"^\s*DISTINCT\b", select_clause, re.I))
+    select_clause = re.sub(r"^\s*DISTINCT\b", "", select_clause, count=1, flags=re.I).strip()
+    selected = []
+    aliases: dict[str, str] = {}
+    for item in _split_sql_list(select_clause):
+        expression, alias = _strip_select_alias(item)
+        selected.append(expression)
+        if alias:
+            aliases[_normalize_expression(alias)] = _normalize_expression(expression)
+
+    group_clause = _clause(
+        sql,
+        r"\bGROUP\s+BY\b",
+        (r"\bHAVING\b", r"\bORDER\s+BY\b", r"\bFETCH\b", r"\bOFFSET\b"),
+    )
+    grouped = {
+        aliases.get(_normalize_expression(item), _normalize_expression(item))
+        for item in _split_sql_list(group_clause)
+    }
+    aggregate_query = any(_contains_aggregate(item) for item in selected)
+    missing = [
+        expression
+        for expression in selected
+        if not _contains_aggregate(expression)
+        and not _is_constant_expression(expression)
+        and _normalize_expression(expression) not in grouped
+        and (aggregate_query or bool(group_clause))
+    ]
+    findings: list[dict[str, str]] = []
+    recommended = sql
+    if missing:
+        recommended = _recommended_group_by(sql, missing)
+        recommended_group = _clause(
+            recommended,
+            r"\bGROUP\s+BY\b",
+            (r"\bHAVING\b", r"\bORDER\s+BY\b", r"\bFETCH\b", r"\bOFFSET\b"),
+        )
+        group_fix = "GROUP BY " + (recommended_group or ", ".join(missing))
+        for expression in missing:
+            finding = f"non-aggregated column {expression} is not included in GROUP BY"
+            findings.append(
+                {
+                    "location": "GROUP BY",
+                    "finding": finding,
+                    "root_cause": finding,
+                    "impact": "Oracle aggregate query can fail with ORA-00979",
+                    "minimal_fix": f"Use {group_fix} or adjust the query structure",
+                    "risk": "high",
+                }
+            )
+
+    order_clause = _clause(sql, r"\bORDER\s+BY\b", (r"\bFETCH\b", r"\bOFFSET\b"))
+    if distinct and order_clause:
+        selectable = {_normalize_expression(item) for item in selected} | set(aliases)
+        for order_item in _split_sql_list(order_clause):
+            normalized = _normalize_expression(order_item)
+            if not normalized.isdigit() and normalized not in selectable:
+                finding = f"ORDER BY expression {order_item} is not present in the DISTINCT select list"
+                findings.append(
+                    {
+                        "location": "DISTINCT/ORDER BY",
+                        "finding": finding,
+                        "root_cause": finding,
+                        "impact": "Oracle can reject the query because DISTINCT hides the sort expression",
+                        "minimal_fix": "Select the ORDER BY expression, order by a selected alias, or remove unnecessary DISTINCT",
+                        "risk": "medium",
+                    }
+                )
+
+    having_clause = _clause(sql, r"\bHAVING\b", (r"\bORDER\s+BY\b", r"\bFETCH\b", r"\bOFFSET\b"))
+    if having_clause and not group_clause and not _contains_aggregate(having_clause):
+        finding = "HAVING is used without GROUP BY or an aggregate expression"
+        findings.append(
+            {
+                "location": "HAVING",
+                "finding": finding,
+                "root_cause": finding,
+                "impact": "Filtering semantics are ambiguous or invalid for the target dialect",
+                "minimal_fix": "Use WHERE for row filtering or add the intended GROUP BY/aggregate",
+                "risk": "medium",
+            }
+        )
+    elif having_clause and group_clause:
+        remaining_having = _without_aggregate_calls(having_clause)
+        having_columns = {
+            _normalize_expression(column): column
+            for column in re.findall(
+                r"\b[A-Za-z_][\w$#]*\.[A-Za-z_][\w$#]*\b",
+                remaining_having,
+            )
+        }
+        for normalized, column in having_columns.items():
+            if aliases.get(normalized, normalized) not in grouped:
+                finding = f"non-aggregated HAVING column {column} is not included in GROUP BY"
+                findings.append(
+                    {
+                        "location": "HAVING",
+                        "finding": finding,
+                        "root_cause": finding,
+                        "impact": "Oracle aggregate query can fail with ORA-00979",
+                        "minimal_fix": "Group the expression, aggregate it, or move row-level filtering to WHERE",
+                        "risk": "high",
+                    }
+                )
+    return findings, recommended
+
+
 def _sql(request: dict[str, Any]) -> dict[str, Any]:
     sql = str(request.get("sql") or "").strip()
     if not sql and request.get("input"):
@@ -73,6 +345,7 @@ def _sql(request: dict[str, Any]) -> dict[str, Any]:
     if not sql and not error_text and not execution_plan:
         return invalid("sql, error or execution_plan is required")
     findings = []
+    recommended = sql
     if sql:
         if sql.count("(") != sql.count(")"):
             findings.append({"location": "parentheses", "root_cause": "Unbalanced parentheses", "impact": "SQL cannot parse", "minimal_fix": "Balance the expression", "risk": "low"})
@@ -90,6 +363,8 @@ def _sql(request: dict[str, Any]) -> dict[str, Any]:
             findings.append({"location": "SELECT", "root_cause": "Wildcard projection", "impact": "Unstable contract and excess I/O", "minimal_fix": "List required columns", "risk": "low"})
         if re.search(r"\bnot\s+in\s*\(", sql, re.I):
             findings.append({"location": "NOT IN", "root_cause": "NULL-sensitive anti-join", "impact": "Unexpected empty result when subquery contains NULL", "minimal_fix": "Use NOT EXISTS with correlated keys", "risk": "high"})
+        semantic_findings, recommended = _sql_semantic_findings(sql)
+        findings.extend(semantic_findings)
     matched_error = None
     for code, knowledge in ORA_KNOWLEDGE.items():
         if code in error_text.upper():
@@ -107,17 +382,17 @@ def _sql(request: dict[str, Any]) -> dict[str, Any]:
         ):
             if re.search(pattern, execution_plan, re.I): findings.append({"location": "Execution Plan", "root_cause": cause, "impact": "May dominate latency at current cardinality", "minimal_fix": fix, "risk": risk})
     formatted = _format_sql(sql) if sql else ""
-    recommended = formatted
+    recommended_sql = _format_sql(recommended) if recommended else ""
     sections = [
         ("Problem Location", [item["location"] for item in findings]),
         ("Root Cause", [item["root_cause"] for item in findings]),
         ("Impact", [item["impact"] for item in findings]),
         ("Minimal Fix", [item["minimal_fix"] for item in findings]),
-        ("Recommended SQL", f"```sql\n{recommended}\n```" if recommended else "No SQL supplied"),
+        ("Recommended SQL", f"```sql\n{recommended_sql}\n```" if recommended_sql else "No SQL supplied"),
         ("Risk", [item["risk"] for item in findings]),
     ]
     item = _report(request, "SQL Diagnostic Report", sections, "sql-diagnostics")
-    return result(SkillStatus.SUCCESS, "SQL analyzed without execution", data={"dialect": request.get("dialect", "auto"), "findings": findings, "formatted_sql": formatted, "matched_error": matched_error, "execution_plan_supplied": bool(execution_plan), "executed": False}, artifacts=[item])
+    return result(SkillStatus.SUCCESS, "SQL analyzed without execution", data={"dialect": request.get("dialect", "auto"), "findings": findings, "formatted_sql": formatted, "recommended_sql": recommended_sql, "matched_error": matched_error, "execution_plan_supplied": bool(execution_plan), "executed": False}, artifacts=[item])
 
 
 def _read_logs(request: dict[str, Any]) -> list[str]:
