@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "status",
+    "message",
+    "data",
+    "artifacts",
+    "capabilities"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "SUCCESS",
+        "PARTIAL_SUCCESS",
+        "DEPENDENCY_MISSING",
+        "MODEL_RUNTIME_REQUIRED",
+        "UNSUPPORTED",
+        "INVALID_INPUT",
+        "FAILED"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object"
+    },
+    "artifacts": {
+      "type": "array"
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "capabilities": {
+      "type": "object"
+    }
+  }
+}

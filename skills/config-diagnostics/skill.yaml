@@ -1,0 +1,40 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "config-diagnostics",
+  "version": "1.0.0",
+  "description": "Secret-redacted JSON, YAML, XML, properties, env, INI and service configuration validation.",
+  "entrypoint": "scripts/run.py",
+  "handler": "config-diagnostics",
+  "operations": [
+    "validate",
+    "security_scan",
+    "dependency_scan"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "yaml"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

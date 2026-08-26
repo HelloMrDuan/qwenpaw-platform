@@ -1,0 +1,41 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "ops-troubleshooter",
+  "version": "1.0.0",
+  "description": "Focused observe-hypothesize-verify troubleshooting plans for Linux, containers, Kubernetes, services and GPU.",
+  "entrypoint": "scripts/run.py",
+  "handler": "ops-troubleshooter",
+  "operations": [
+    "analyze",
+    "plan_checks"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "docker",
+      "kubectl",
+      "nvidia-smi"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

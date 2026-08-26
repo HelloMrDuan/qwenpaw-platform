@@ -2,7 +2,7 @@
   "name": "pdf-editor",
   "type": "skill",
   "version": "1.2.0",
-  "description": "Deterministic PDF editing with contract-based Artifact output and StreamEvent reporting.",
+  "description": "Advanced deterministic PDF editing for precise layout-preserving operations, Artifact output and StreamEvent reporting.",
   "executor": {
     "runtime": "python",
     "path": "executor/main.py",

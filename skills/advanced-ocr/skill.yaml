@@ -1,0 +1,49 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "advanced-ocr",
+  "version": "1.0.0",
+  "description": "Image OCR orchestration with text, confidence, bounding boxes and structured output; PDF OCR stays built-in.",
+  "entrypoint": "scripts/run.py",
+  "handler": "advanced-ocr",
+  "operations": [
+    "ocr",
+    "batch",
+    "layout",
+    "table",
+    "json",
+    "markdown",
+    "txt",
+    "csv",
+    "xlsx"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "tesseract",
+      "openpyxl"
+    ],
+    "runtime": [
+      "paddleocr"
+    ]
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

@@ -1,9 +1,17 @@
 ---
 name: pdf-editor
-description: "Production deterministic PDF editing skill. Use for actual PDF modification: replace/delete text, page operations, add/replace images, add text/watermark/page numbers, merge/split/extract. Keeps V2 character-level placement and adds PDF classification, scoped occurrence editing, visual validation and streamable progress events."
+description: "Advanced deterministic PDF editing for precise image/text placement, bbox/transform/layout preservation, validated page insertion, Chinese page numbering and visual QA. Use QwenPaw builtin pdf for ordinary reading, OCR, merge, split, rotation and encryption."
 ---
 
-# PDF Editor - Production V1.2
+# Advanced PDF Editor - Production V1.2
+
+## Routing boundary
+
+Use the QwenPaw built-in `pdf` Skill for ordinary PDF reading, OCR, merge,
+split, rotation and encryption. Use this Advanced PDF Editor only when the task
+needs precise image replacement, bounding-box/transform preservation, validated
+page insertion, Chinese page numbering, precise text insertion, layout
+preservation or visual validation.
 
 Use this skill when the user wants to **modify a PDF and receive a new PDF**.
 
@@ -130,7 +138,7 @@ For equal-length replacements, the engine:
 Private exact fonts may be supplied in:
 
 ```text
-/app/working/font-registry
+font-registry
 ```
 
 or `resources/fonts/` in a private deployment. System CJK fonts are discovered on supported hosts.
@@ -138,7 +146,7 @@ or `resources/fonts/` in a private deployment. System CJK fonts are discovered o
 or via:
 
 ```text
-PDF_EDITOR_FONT_DIRS=/path/a:/path/b
+PDF_EDITOR_FONT_DIRS=font-registry
 ```
 
 Do not bundle or expose proprietary font files in this Skill.

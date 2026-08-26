@@ -48,6 +48,8 @@ tmp/
 
 # Locally generated Extension release artifacts
 dist/extensions/
+dist/skills/
+artifacts/
 
 # Local offline Extension deployment simulation
 workspace/extensions/

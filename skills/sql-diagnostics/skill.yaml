@@ -1,0 +1,41 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "sql-diagnostics",
+  "version": "1.0.0",
+  "description": "Read-only Oracle, MySQL, PostgreSQL and SQL Server SQL/error diagnosis with risk-aware minimal fixes.",
+  "entrypoint": "scripts/run.py",
+  "handler": "sql-diagnostics",
+  "operations": [
+    "analyze",
+    "format",
+    "explain_plan",
+    "diagnose_error"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "sqlparse"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

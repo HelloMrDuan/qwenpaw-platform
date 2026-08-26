@@ -1,0 +1,39 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "log-incident-analyzer",
+  "version": "1.0.0",
+  "description": "Chronological multi-stack incident analysis, clustering, root-cause chain and evidence report.",
+  "entrypoint": "scripts/run.py",
+  "handler": "log-incident-analyzer",
+  "operations": [
+    "analyze",
+    "cluster",
+    "timeline",
+    "correlate"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

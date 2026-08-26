@@ -13,7 +13,8 @@ CLI, deployment backends, and messaging support. Running it as a second
 production Runtime beside QwenPaw would duplicate ownership of Agent execution,
 tools, sessions, and Channels.
 
-Hermes is therefore classified as `PARTIAL KEEP`:
+The Phase 15 final disposition supersedes the earlier `PARTIAL KEEP` label:
+Hermes is now `ARCHIVED / REFERENCE ONLY`:
 
 - keep selected Agent orchestration, tool-safety, Skill composition, memory,
   context, and session modules as design/reference assets;
@@ -137,4 +138,5 @@ provides:
 4. isolated tests and rollback behavior;
 5. explicit approval for implementation.
 
-Until then, the final Hermes strategy is `PARTIAL KEEP`.
+The final Hermes strategy is `ARCHIVED / REFERENCE ONLY`. No future production
+role is planned; any reuse requires a new explicit architecture decision.

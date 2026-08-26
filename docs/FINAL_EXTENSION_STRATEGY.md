@@ -12,7 +12,7 @@
 | WeCom / 企业微信 | `BUILTIN` | QwenPaw v2.1.0 built-in WeCom Channel | Historical Adapter, Plugin and Bridge are `LEGACY / FALLBACK / REFERENCE ONLY` |
 | WeChat / 微信 | `BUILTIN` | QwenPaw v2.1.0 built-in WeChat Channel | Configure and validate in Runtime; do not create a duplicate Channel |
 | WeChat Customer / 微信客服 | `CUSTOM` (`CUSTOM REQUIRED`) | Preserve a separate open-kfid Gateway/Adapter boundary if the capability is retained | No BaseChannel or new Plugin is authorized in this phase |
-| Hermes | `PARTIAL KEEP` | Do not deploy as a competing Runtime | Preserve selected orchestration, tool-safety, Skill, memory/context and session modules as reference |
+| Hermes | `ARCHIVED / REFERENCE ONLY` | Never deploy or start as a production Runtime | Preserve selected lifecycle, concurrency, Skill orchestration, memory/context and session modules as reference only |
 | PDF Editor | `CUSTOM` (`CUSTOM SKILL`) | Versioned Skill package uploaded through the supported QwenPaw/AgentScope Skill path | Continue independent Skill lifecycle and regression discipline |
 
 `LEGACY` applies to the historical Telegram/WeCom custom assets, not to the

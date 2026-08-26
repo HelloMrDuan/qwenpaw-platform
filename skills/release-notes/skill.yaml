@@ -1,0 +1,41 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "release-notes",
+  "version": "1.0.0",
+  "description": "Conventional-Commit-aware release notes, migration, risk, rollback and test summary generation.",
+  "entrypoint": "scripts/run.py",
+  "handler": "release-notes",
+  "operations": [
+    "generate",
+    "changelog",
+    "risk",
+    "rollback"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "git"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

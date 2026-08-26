@@ -3,7 +3,7 @@
 > Channel strategy update: Telegram、企业微信和微信在 QwenPaw v2.1.0 中为
 > `BUILTIN`，生产默认使用内置 Channel。历史 Telegram/WeCom Adapter、Plugin
 > 与 Bridge 为 `LEGACY / FALLBACK / REFERENCE ONLY`。微信客服是独立的
-> `CUSTOM REQUIRED` 链路；Hermes 为 `PARTIAL KEEP`。详见
+> `CUSTOM REQUIRED` 链路；Hermes 为 `ARCHIVED / REFERENCE ONLY`。详见
 > `FINAL_EXTENSION_STRATEGY.md`。
 
 ## 1. 文档目的
@@ -46,7 +46,7 @@
 | 能力 | 类型判断 | 当前状态 | 入口位置 | 配置位置 | 主要依赖 | 测试状态 | 归属 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Console | Channel | 已运行（云端历史）；已配置、当前启用 | 官方 QwenPaw Runtime；仓库无独立入口 | `configs/agent.json` → `channels.console` | QwenPaw/AgentScope Runtime、模型 Provider | 有 `sessions/console/` 历史运行数据；本地 Runtime 未安装，未做当前冒烟 | 已有能力 |
-| Hermes | 独立历史 Agent Runtime；部分模块仅作参考 | `PARTIAL KEEP`；不作为生产 Runtime | `plugins/hermes/recovered/hermes-agent-main/` | 历史配置与 Bridge 资料；不进入生产配置 | 历史 Hermes Runtime 依赖 | 已完成源码职责审计；未执行外部服务 | 已有历史能力，策略已收敛 |
+| Hermes | 独立历史 Agent Runtime；部分模块仅作参考 | `ARCHIVED / REFERENCE ONLY`；禁止作为生产 Runtime | `plugins/hermes/recovered/hermes-agent-main/` | 历史配置与 Bridge 资料；不进入生产配置 | 无生产依赖 | 已完成源码职责审计；未执行外部服务 | 历史能力，仅保留参考 |
 | Telegram | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置 Channel | Runtime Console：Bot Token、代理、Typing、访问控制等 | QwenPaw Runtime、Telegram API | 内置能力由真实 Console 确认；历史 Adapter/Plugin 测试仅作参考 | 已有 Runtime 能力 |
 | 企业微信机器人 | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置企业微信 Channel | Runtime Console：Bot ID、Secret、扫码授权、媒体目录、群聊上下文 | QwenPaw Runtime、企业微信服务 | 内置能力由真实 Console 确认；历史 Adapter/Plugin 测试仅作参考 | 已有 Runtime 能力 |
 | 企业微信客服 Gateway | Custom Gateway + Adapter | `CUSTOM REQUIRED`；本阶段不开发 | `plugins/wechat-customer/`、`adapters/wechat_customer/` 与历史 Gateway | `open_kfid`、`external_userid`、cursor、Gateway-owned DB | 企业微信客服 API、SQLite、Gateway、QwenPaw | 离线链路测试已存在；源码/配置键审计确认内置微信/企微未证明等价 | 已有历史能力，策略已收敛 |
@@ -131,7 +131,7 @@ Word、Excel、PPT 并非“完全不存在”：仓库已经有 `docx`、`xlsx`
 
 ## 7. 当前关键缺口
 
-1. Hermes 已收敛为 `PARTIAL KEEP`，微信客服已判定为 `CUSTOM REQUIRED`；两者均未获新功能开发或生产部署授权。
+1. Hermes 已归档为 `ARCHIVED / REFERENCE ONLY`，微信客服已判定为 `CUSTOM REQUIRED`；Hermes 不再获得新功能开发或生产部署授权。
 2. `channels/` 没有实现，`plugins/`、`adapters/`、`mcp/` 目标目录尚未进入渐进迁移。
 3. 除 PDF Editor 回归脚本外，现有 Skills 普遍没有专属测试目录。
 4. Tavily MCP 使用 `@latest` 且未启用，不满足生产版本锁定要求。

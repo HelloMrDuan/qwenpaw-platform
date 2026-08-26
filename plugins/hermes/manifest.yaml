@@ -2,7 +2,7 @@
   "name": "hermes",
   "type": "plugin",
   "version": "0.1.0-recovered",
-  "description": "Recovered Hermes 0.20.1 source baseline; not registered with QwenPaw Runtime.",
+  "description": "ARCHIVED / REFERENCE ONLY Hermes 0.20.1 source; never register or start as production Runtime.",
   "runtime": "python",
   "entrypoint": "recovered/hermes-agent-main/gateway/run.py",
   "dependencies": [

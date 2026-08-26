@@ -1,0 +1,44 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "media-transcriber",
+  "version": "1.0.0",
+  "description": "Media inspection/audio extraction plus ASR transcript and meeting-report orchestration.",
+  "entrypoint": "scripts/run.py",
+  "handler": "media-transcriber",
+  "operations": [
+    "inspect",
+    "extract_audio",
+    "transcribe",
+    "summarize_transcript",
+    "export_transcript"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "ffmpeg"
+    ],
+    "runtime": [
+      "asr"
+    ]
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

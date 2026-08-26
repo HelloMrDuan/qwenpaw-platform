@@ -1,0 +1,49 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "photo-restoration",
+  "version": "1.0.0",
+  "description": "Traditional old-photo restoration pipeline with explicit optional AI restoration Runtime stages.",
+  "entrypoint": "scripts/run.py",
+  "handler": "photo-restoration",
+  "operations": [
+    "inspect",
+    "pipeline",
+    "comparison",
+    "batch"
+  ],
+  "capabilities": {
+    "required": [
+      "pillow"
+    ],
+    "optional": [
+      "opencv"
+    ],
+    "runtime": [
+      "realesrgan",
+      "gfpgan",
+      "codeformer",
+      "lama",
+      "colorization"
+    ]
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

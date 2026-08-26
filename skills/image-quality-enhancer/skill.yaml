@@ -1,0 +1,49 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "image-quality-enhancer",
+  "version": "1.0.0",
+  "description": "Traditional resize, denoise, sharpen, gamma, contrast and white-balance enhancement with optional AI super-resolution.",
+  "entrypoint": "scripts/run.py",
+  "handler": "image-quality-enhancer",
+  "operations": [
+    "enhance",
+    "upscale_2x",
+    "upscale_4x",
+    "denoise",
+    "sharpen",
+    "gamma",
+    "white_balance",
+    "batch"
+  ],
+  "capabilities": {
+    "required": [
+      "pillow"
+    ],
+    "optional": [
+      "opencv"
+    ],
+    "runtime": [
+      "realesrgan"
+    ]
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

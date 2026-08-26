@@ -1,0 +1,51 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "image-background-tools",
+  "version": "1.0.0",
+  "description": "Safe solid-background removal, replacement, blur and subject crop with optional segmentation Runtime.",
+  "entrypoint": "scripts/run.py",
+  "handler": "image-background-tools",
+  "operations": [
+    "remove_solid",
+    "transparent",
+    "white",
+    "black",
+    "color",
+    "replace",
+    "blur",
+    "crop_subject",
+    "segment",
+    "alpha_matting"
+  ],
+  "capabilities": {
+    "required": [
+      "pillow"
+    ],
+    "optional": [
+      "opencv"
+    ],
+    "runtime": [
+      "background_removal"
+    ]
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

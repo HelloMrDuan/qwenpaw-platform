@@ -1,0 +1,42 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "data-profiler",
+  "version": "1.0.0",
+  "description": "CSV, TSV, XLSX, JSONL and optional Parquet data quality/statistical profiling.",
+  "entrypoint": "scripts/run.py",
+  "handler": "data-profiler",
+  "operations": [
+    "profile",
+    "quality",
+    "correlation",
+    "leakage_suspicion"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "openpyxl",
+      "pyarrow"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

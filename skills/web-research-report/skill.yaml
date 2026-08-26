@@ -1,0 +1,41 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "web-research-report",
+  "version": "1.0.0",
+  "description": "Browser-independent research methodology: source quality, freshness, cross-validation, conflicts and citations.",
+  "entrypoint": "scripts/run.py",
+  "handler": "web-research-report",
+  "operations": [
+    "plan",
+    "synthesize",
+    "cross_validate",
+    "report"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "browser_builtin"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

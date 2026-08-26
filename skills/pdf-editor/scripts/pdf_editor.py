@@ -317,11 +317,11 @@ def _font_registry_dirs() -> list[Path]:
     dirs += [
         SKILL_ROOT / "resources" / "fonts",
         SKILL_ROOT / "font-registry",
-        Path("/app/working/font-registry"),
-        Path("/app/working/fonts"),
         Path.home() / ".fonts",
-        Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts",
     ]
+    windows_directory = os.environ.get("WINDIR")
+    if windows_directory:
+        dirs.append(Path(windows_directory) / "Fonts")
     uniq: list[Path] = []
     seen = set()
     for d in dirs:
@@ -570,7 +570,7 @@ def _resolve_font(doc: fitz.Document, page: fitz.Page, span: dict[str, Any], new
         raise ValueError(
             f"Exact source font unavailable for new text. source_font={source_name!r}; "
             f"embedded_missing_or_blank={''.join(failed)!r}. Put the licensed full font in "
-            "/app/working/font-registry (or PDF_EDITOR_FONT_DIRS) and retry."
+            "this Skill's font-registry directory (or PDF_EDITOR_FONT_DIRS) and retry."
         )
 
     # 3. Auto mode: visually closest family, render-verified.

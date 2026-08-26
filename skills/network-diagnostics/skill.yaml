@@ -1,0 +1,42 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "network-diagnostics",
+  "version": "1.0.0",
+  "description": "Windows/Linux DNS, route, TCP, TLS, HTTP, proxy and IPv4/IPv6 verification plans.",
+  "entrypoint": "scripts/run.py",
+  "handler": "network-diagnostics",
+  "operations": [
+    "plan",
+    "analyze_evidence"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "curl",
+      "dig",
+      "nslookup",
+      "traceroute"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

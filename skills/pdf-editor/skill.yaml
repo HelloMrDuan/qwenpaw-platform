@@ -1,8 +1,8 @@
 schema_version: qwenpaw-extension-skill.v1
 id: pdf-editor
-name: PDF Editor
+name: Advanced PDF Editor
 version: 1.2.0
-description: Deterministic PDF editing with semantic, visual, geometry, and glyph validation.
+description: Advanced deterministic PDF editing with semantic, visual, geometry, and glyph validation; ordinary PDF operations stay built-in.
 type: skill
 compatibility:
   qwenpaw_discovery: SKILL.md

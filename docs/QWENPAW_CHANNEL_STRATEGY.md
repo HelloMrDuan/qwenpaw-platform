@@ -13,7 +13,7 @@
 | WeChat / 微信 | `BUILTIN` | Configure and accept the QwenPaw v2.1.0 built-in Channel |
 | WeChat Customer / 微信客服 | `CUSTOM REQUIRED` | Preserve a separate open-kfid Gateway/Adapter boundary if this business capability is retained |
 | PDF Editor | `CUSTOM SKILL` | Continue using the versioned Skill release and Workspace upload path |
-| Hermes | `PARTIAL KEEP` | Preserve selected orchestration/session modules as reference; do not deploy a competing Runtime |
+| Hermes | `ARCHIVED / REFERENCE ONLY` | Preserve selected orchestration/session modules as reference only; never deploy a competing Runtime |
 
 This table is the default production-routing decision. Earlier documents that
 describe Telegram or WeCom custom `BaseChannel` implementation as a future step

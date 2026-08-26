@@ -1,4 +1,9 @@
-# PDF Editor V1.2
+# Advanced PDF Editor V1.2
+
+QwenPaw built-in `pdf` remains the default for ordinary reading, OCR, merge,
+split, rotation and encryption. This V1.2 extension is retained for precise
+image/text placement, bbox and transform preservation, validated page
+insertion, Chinese page numbering, layout preservation and visual validation.
 
 PDF Editor is the first standardized QwenPaw workspace Skill. It retains the existing QwenPaw discovery path and deterministic engine while adding an optional Extension Contract adapter.
 

@@ -1,0 +1,59 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "image-toolkit",
+  "version": "1.0.0",
+  "description": "Deterministic Pillow-based image inspection, conversion, geometry, metadata, batch and duplicate operations without AI.",
+  "entrypoint": "scripts/run.py",
+  "handler": "image-toolkit",
+  "operations": [
+    "info",
+    "exif",
+    "hash",
+    "convert",
+    "resize",
+    "crop",
+    "rotate",
+    "flip",
+    "compress",
+    "quality",
+    "dpi",
+    "strip_exif",
+    "alpha",
+    "concat",
+    "split",
+    "to_pdf",
+    "duplicates",
+    "batch_convert",
+    "batch_compress"
+  ],
+  "capabilities": {
+    "required": [
+      "pillow"
+    ],
+    "optional": [
+      "opencv",
+      "imagemagick"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "api-debugger",
+  "version": "1.0.0",
+  "description": "Offline HTTP evidence diagnosis and reproducible curl/Python/Java request generation.",
+  "entrypoint": "scripts/run.py",
+  "handler": "api-debugger",
+  "operations": [
+    "analyze",
+    "generate_curl",
+    "generate_python",
+    "generate_java"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "curl"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

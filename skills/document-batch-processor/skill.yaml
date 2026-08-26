@@ -1,0 +1,41 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "document-batch-processor",
+  "version": "1.0.0",
+  "description": "Office-file inventory, classification, rename/move planning, hashing, deduplication and built-in Skill delegation.",
+  "entrypoint": "scripts/run.py",
+  "handler": "document-batch-processor",
+  "operations": [
+    "inventory",
+    "classify",
+    "plan",
+    "copy",
+    "move",
+    "index"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}

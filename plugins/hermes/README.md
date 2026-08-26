@@ -1,6 +1,11 @@
 # Hermes Historical Source
 
-状态：`RECOVERED_SOURCE_ONLY`。该目录尚未接入 QwenPaw Runtime，也不代表可运行发布包。
+状态：`ARCHIVED / REFERENCE ONLY`。该目录不会接入生产 QwenPaw Runtime，
+不代表可运行发布包，也不再继续开发 Gateway、Plugin 或 Channel Bridge。
+
+仅保留以下设计参考：multi-agent lifecycle、tool concurrency、Skill
+orchestration、memory/context 与 session。禁止启动历史 Hermes Gateway，禁止
+将 Hermes 作为生产 Runtime，禁止恢复 Telegram/WeCom Bridge 维护线。
 
 ## 来源
 

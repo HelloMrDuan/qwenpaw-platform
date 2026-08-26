@@ -1,0 +1,40 @@
+{
+  "schema_version": "qwenpaw-productivity-skill.v1",
+  "name": "archive-inspector",
+  "version": "1.0.0",
+  "description": "Safe ZIP/tar inventory, checksums, duplicates, comparison and Zip-Slip-aware extraction.",
+  "entrypoint": "scripts/run.py",
+  "handler": "archive-inspector",
+  "operations": [
+    "inspect",
+    "compare",
+    "extract"
+  ],
+  "capabilities": {
+    "required": [],
+    "optional": [
+      "7z"
+    ],
+    "runtime": []
+  },
+  "statuses": [
+    "SUCCESS",
+    "PARTIAL_SUCCESS",
+    "DEPENDENCY_MISSING",
+    "MODEL_RUNTIME_REQUIRED",
+    "UNSUPPORTED",
+    "INVALID_INPUT",
+    "FAILED"
+  ],
+  "artifact_contract": {
+    "required_metadata": [
+      "operation",
+      "source",
+      "output",
+      "mime_type",
+      "size",
+      "checksum"
+    ],
+    "overwrite_source": false
+  }
+}
