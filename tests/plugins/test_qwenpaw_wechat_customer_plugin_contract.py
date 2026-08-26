@@ -11,6 +11,7 @@ from adapters.wechat_customer.runtime import WeChatCustomerRuntimeAdapter
 from core.contracts import DeliveryStatus, MessageEvent
 from core.extensions import ExtensionRuntime, ExtensionType
 from core.extensions.runtime import ExternalServiceSnapshot, ExternalServiceState
+from tests._qwenpaw_v2_1_support import install_qwenpaw_v2_1_stubs
 from tests.runtime._agentscope_flow_support import StaticRunningLifecycle
 
 
@@ -49,10 +50,10 @@ def _gateway_event(message_id: str, content: str) -> dict[str, object]:
 
 class _FakePluginApi:
     def __init__(self) -> None:
-        self.startup_hooks: list[tuple[str, object, int]] = []
+        self.channels: list[dict[str, object]] = []
 
-    def register_startup_hook(self, name, callback, *, priority):
-        self.startup_hooks.append((name, callback, priority))
+    def register_channel(self, **kwargs):
+        self.channels.append(kwargs)
 
 
 class _FakeWeChatCustomerTransport:
@@ -87,6 +88,7 @@ class _FakeWeChatCustomerTransport:
 class QwenPawWeChatCustomerPluginContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        cls.base_channel = install_qwenpaw_v2_1_stubs()
         cls.document = json.loads(
             (PLUGIN_ROOT / "plugin.json").read_text(encoding="utf-8")
         )
@@ -117,15 +119,27 @@ class QwenPawWeChatCustomerPluginContractTests(unittest.TestCase):
         )
         self.assertEqual(
             meta["required_secrets"],
-            ["CORP_ID", "APP_SECRET", "TOKEN", "AESKEY", "OPEN_KFID"],
+            ["app_secret", "callback_token", "encoding_aes_key"],
         )
         self.assertEqual(meta["config"]["values"], {})
         self.assertEqual(
             [field["name"] for field in meta["config"]["fields"]],
-            meta["required_secrets"],
+            [
+                "corp_id",
+                "app_secret",
+                "callback_token",
+                "encoding_aes_key",
+                "open_kfid",
+                "gateway_url",
+            ],
         )
-        self.assertTrue(
-            all(field["secret"] is True for field in meta["config"]["fields"])
+        self.assertEqual(
+            [
+                field["name"]
+                for field in meta["config"]["fields"]
+                if field["secret"] is True
+            ],
+            meta["required_secrets"],
         )
         self.assertTrue(
             all("value" not in field for field in meta["config"]["fields"])
@@ -136,8 +150,8 @@ class QwenPawWeChatCustomerPluginContractTests(unittest.TestCase):
             plugin_id="wechat-customer-extension-channel",
             name="WeChat Customer Extension Channel",
             description=(
-                "Official QwenPaw Plugin facade for the recovered WeChat "
-                "Customer Extension Adapter."
+                "Native QwenPaw Channel wrapper for the external recovered "
+                "WeChat Customer Gateway."
             ),
             permissions=(
                 "extension.registry.read",
@@ -148,6 +162,7 @@ class QwenPawWeChatCustomerPluginContractTests(unittest.TestCase):
             plugin_type="channel",
             manifest_reference="plugins/wechat-customer/manifest.yaml",
             adapter_entrypoint="adapters/wechat_customer/runtime.py",
+            config_mapping=meta["extension"]["config_mapping"],
         )
         self.assertEqual(generated, document)
 
@@ -162,11 +177,11 @@ class QwenPawWeChatCustomerPluginContractTests(unittest.TestCase):
 
         api = _FakePluginApi()
         plugin.register(api)
-        self.assertEqual(len(api.startup_hooks), 1)
-        hook_name, hook, priority = api.startup_hooks[0]
-        self.assertEqual(hook_name, "wechat-customer-extension-manifest")
-        self.assertEqual(priority, 100)
-        self.assertEqual(hook(), metadata)
+        self.assertEqual(len(api.channels), 1)
+        registration = api.channels[0]
+        channel_class = registration["channel_class"]
+        self.assertTrue(issubclass(channel_class, self.base_channel))
+        self.assertEqual(channel_class.channel, "wechat_customer")
 
         lifecycle = StaticRunningLifecycle(metadata)
         transport = _FakeWeChatCustomerTransport()

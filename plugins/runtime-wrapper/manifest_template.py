@@ -25,6 +25,7 @@ def build_plugin_manifest(
     entrypoint: str = "plugin.py",
     manifest_reference: str | None = None,
     adapter_entrypoint: str | None = None,
+    config_mapping: Mapping[str, str] | None = None,
     qwenpaw_min_version: str = "2.1.0",
     qwenpaw_max_version: str = "2.2.0",
 ) -> dict[str, Any]:
@@ -56,6 +57,27 @@ def build_plugin_manifest(
     raw_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest_reference = manifest_reference or manifest_path.name
     adapter_entrypoint = adapter_entrypoint or metadata.entrypoint
+    extension = {
+        "name": metadata.name,
+        "type": metadata.type.value,
+        "manifest": manifest_reference,
+        "runtime": metadata.runtime.value,
+        "declared_entrypoint": metadata.entrypoint,
+        "adapter_entrypoint": adapter_entrypoint,
+    }
+    if config_mapping is not None:
+        extension["config_mapping"] = dict(config_mapping)
+    config_fields = config.get("fields", [])
+    required_secrets = (
+        [
+            field["name"]
+            for field in config_fields
+            if isinstance(field, Mapping) and field.get("secret") is True
+        ]
+        if config_mapping is not None
+        else list(raw_manifest.get("required_secrets", []))
+    )
+
     return {
         "id": plugin_id,
         "name": name.strip(),
@@ -70,16 +92,9 @@ def build_plugin_manifest(
             "max": qwenpaw_max_version.strip(),
         },
         "meta": {
-            "extension": {
-                "name": metadata.name,
-                "type": metadata.type.value,
-                "manifest": manifest_reference,
-                "runtime": metadata.runtime.value,
-                "declared_entrypoint": metadata.entrypoint,
-                "adapter_entrypoint": adapter_entrypoint,
-            },
+            "extension": extension,
             "permissions": list(permissions),
             "config": dict(config),
-            "required_secrets": list(raw_manifest.get("required_secrets", [])),
+            "required_secrets": required_secrets,
         },
     }

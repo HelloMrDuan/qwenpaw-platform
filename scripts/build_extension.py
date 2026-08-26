@@ -417,7 +417,12 @@ def build_qwenpaw_plugin(
         f'"""Private runtime namespace for {plugin_manifest["id"]}."""\n'
     ).encode("utf-8")
     for target, source in sorted(sources.items()):
-        if not target.startswith(namespace_prefixes):
+        plugin_local_python = (
+            source.parent == plugin_root
+            and source.suffix.lower() == ".py"
+            and target not in {"plugin.py", "__init__.py"}
+        )
+        if not target.startswith(namespace_prefixes) and not plugin_local_python:
             continue
         namespaced_target = f"{package_namespace}/{target}"
         content = source.read_bytes()
@@ -879,12 +884,62 @@ def _validate_qwenpaw_plugin_manifest(
         raise ExtensionPackagingError(
             "official Plugin release must not contain configuration values"
         )
-    if list(meta.get("required_secrets", [])) != list(
-        _read_json_object(internal_manifest_path).get("required_secrets", [])
+    fields = config.get("fields")
+    if not isinstance(fields, list) or any(
+        not isinstance(item, Mapping) for item in fields
     ):
         raise ExtensionPackagingError(
-            "required secret names do not match internal Manifest"
+            "meta.config.fields must be a list of mappings"
         )
+    field_names = [item.get("name") for item in fields]
+    if any(not isinstance(name, str) or not name for name in field_names):
+        raise ExtensionPackagingError(
+            "Plugin config field names must be non-empty text"
+        )
+    if len(field_names) != len(set(field_names)):
+        raise ExtensionPackagingError("Plugin config field names must be unique")
+    secret_field_names = [
+        item["name"] for item in fields if item.get("secret") is True
+    ]
+    official_secrets = list(meta.get("required_secrets", []))
+    if official_secrets != secret_field_names:
+        raise ExtensionPackagingError(
+            "required_secrets must match password/secret Plugin config fields"
+        )
+
+    internal_secrets = list(
+        _read_json_object(internal_manifest_path).get("required_secrets", [])
+    )
+    config_mapping = extension.get("config_mapping")
+    if config_mapping is None:
+        if official_secrets != internal_secrets:
+            raise ExtensionPackagingError(
+                "required secret names do not match internal Manifest"
+            )
+    else:
+        if not isinstance(config_mapping, Mapping):
+            raise ExtensionPackagingError(
+                "meta.extension.config_mapping must be a mapping"
+            )
+        if set(config_mapping) - set(field_names):
+            raise ExtensionPackagingError(
+                "config_mapping contains an undeclared Plugin config field"
+            )
+        targets = list(config_mapping.values())
+        if any(not isinstance(target, str) or not target for target in targets):
+            raise ExtensionPackagingError(
+                "config_mapping targets must be non-empty strings"
+            )
+        if len(targets) != len(set(targets)):
+            raise ExtensionPackagingError("config_mapping targets must be unique")
+        if set(targets) != set(internal_secrets):
+            raise ExtensionPackagingError(
+                "config_mapping must cover the internal Manifest requirements"
+            )
+        if not set(official_secrets).issubset(config_mapping):
+            raise ExtensionPackagingError(
+                "every Plugin secret field must have an internal config mapping"
+            )
     return {
         "internal_manifest_path": internal_manifest_path,
         "adapter_source_path": adapter_source_path,

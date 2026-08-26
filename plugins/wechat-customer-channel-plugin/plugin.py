@@ -14,6 +14,51 @@ PACKAGED_ADAPTER_PATH = PLUGIN_ROOT / "adapter" / "wechat_customer" / "runtime.p
 PACKAGED_WRAPPER_PATH = PLUGIN_ROOT / "runtime" / "wrapper.py"
 SELF_CONTAINED = PACKAGED_ADAPTER_PATH.is_file() and PACKAGED_WRAPPER_PATH.is_file()
 
+CONFIG_FIELDS = [
+    {
+        "name": "corp_id",
+        "label": {"zh": "企业 ID", "en": "Corp ID"},
+        "type": "text",
+        "required": True,
+        "help": {"zh": "历史 Gateway 的 CORP_ID", "en": "Gateway CORP_ID"},
+    },
+    {
+        "name": "app_secret",
+        "label": {"zh": "应用 Secret", "en": "App Secret"},
+        "type": "password",
+        "required": True,
+    },
+    {
+        "name": "callback_token",
+        "label": {"zh": "回调 Token", "en": "Callback Token"},
+        "type": "password",
+        "required": True,
+    },
+    {
+        "name": "encoding_aes_key",
+        "label": {"zh": "EncodingAESKey", "en": "EncodingAESKey"},
+        "type": "password",
+        "required": True,
+    },
+    {
+        "name": "open_kfid",
+        "label": {"zh": "微信客服 ID", "en": "Open KF ID"},
+        "type": "text",
+        "required": True,
+    },
+    {
+        "name": "gateway_url",
+        "label": {"zh": "Gateway 地址", "en": "Gateway URL"},
+        "type": "text",
+        "required": True,
+        "default": "http://127.0.0.1:8798",
+        "help": {
+            "zh": "独立 Gateway Facade 地址",
+            "en": "External Gateway facade URL",
+        },
+    },
+]
+
 
 def _load_source_wrapper_class():
     wrapper_path = (
@@ -124,16 +169,46 @@ class WeChatCustomerChannelPlugin:
     def sync_lifecycle(self, action: str, **kwargs: Any) -> Any:
         return self.runtime.sync_lifecycle(action, **kwargs)
 
-    def register(self, api: Any) -> None:
-        """Official PluginApi entry; metadata loading remains process-safe."""
+    def load_channel_class(self):
+        """Load the native Channel from a process-private Plugin namespace."""
 
-        register_hook = getattr(api, "register_startup_hook", None)
-        if not callable(register_hook):
-            raise TypeError("QwenPaw PluginApi must provide register_startup_hook")
-        register_hook(
-            "wechat-customer-extension-manifest",
-            self.load_extension_manifest,
-            priority=100,
+        if SELF_CONTAINED:
+            namespace = globals().get("PACKAGED_NAMESPACE")
+            if not isinstance(namespace, str) or not namespace:
+                raise RuntimeError("packaged Plugin namespace is not initialized")
+            return importlib.import_module(
+                f"{namespace}.channel"
+            ).WeChatCustomerChannel
+
+        package_name = "qwenpaw_wechat_customer_channel_source"
+        package = sys.modules.get(package_name)
+        if package is None:
+            package_init = PLUGIN_ROOT / "__init__.py"
+            spec = importlib.util.spec_from_file_location(
+                package_name,
+                package_init,
+                submodule_search_locations=[str(PLUGIN_ROOT)],
+            )
+            if spec is None or spec.loader is None:
+                raise RuntimeError(f"cannot load Channel package: {package_init}")
+            package = importlib.util.module_from_spec(spec)
+            sys.modules[package_name] = package
+            spec.loader.exec_module(package)
+        return importlib.import_module(
+            f"{package_name}.channel"
+        ).WeChatCustomerChannel
+
+    def register(self, api: Any) -> None:
+        """Register the native Channel through QwenPaw v2.1.0 PluginApi."""
+
+        register_channel = getattr(api, "register_channel", None)
+        if not callable(register_channel):
+            raise TypeError("QwenPaw PluginApi must provide register_channel")
+        register_channel(
+            channel_class=self.load_channel_class(),
+            label="微信客服",
+            description="企业微信 open_kfid 客服 Gateway Channel",
+            config_fields=CONFIG_FIELDS,
         )
 
 

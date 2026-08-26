@@ -3,7 +3,7 @@
   "name": "WeChat Customer Extension Channel",
   "version": "0.1.0-recovered",
   "type": "channel",
-  "description": "Official QwenPaw Plugin facade for the recovered WeChat Customer Extension Adapter.",
+  "description": "Native QwenPaw Channel wrapper for the external recovered WeChat Customer Gateway.",
   "author": "qwenpaw-platform",
   "entry": {
     "backend": "plugin.py"
@@ -20,7 +20,14 @@
       "manifest": "plugins/wechat-customer/manifest.yaml",
       "runtime": "python",
       "declared_entrypoint": "recovered/wecom_kf_gateway_v345.py",
-      "adapter_entrypoint": "adapters/wechat_customer/runtime.py"
+      "adapter_entrypoint": "adapters/wechat_customer/runtime.py",
+      "config_mapping": {
+        "corp_id": "CORP_ID",
+        "app_secret": "APP_SECRET",
+        "callback_token": "TOKEN",
+        "encoding_aes_key": "AESKEY",
+        "open_kfid": "OPEN_KFID"
+      }
     },
     "permissions": [
       "extension.registry.read",
@@ -30,44 +37,49 @@
     "config": {
       "fields": [
         {
-          "name": "CORP_ID",
+          "name": "corp_id",
+          "type": "text",
+          "required": true,
+          "secret": false
+        },
+        {
+          "name": "app_secret",
           "type": "password",
           "required": true,
           "secret": true
         },
         {
-          "name": "APP_SECRET",
+          "name": "callback_token",
           "type": "password",
           "required": true,
           "secret": true
         },
         {
-          "name": "TOKEN",
+          "name": "encoding_aes_key",
           "type": "password",
           "required": true,
           "secret": true
         },
         {
-          "name": "AESKEY",
-          "type": "password",
+          "name": "open_kfid",
+          "type": "text",
           "required": true,
-          "secret": true
+          "secret": false
         },
         {
-          "name": "OPEN_KFID",
-          "type": "password",
+          "name": "gateway_url",
+          "type": "text",
           "required": true,
-          "secret": true
+          "secret": false,
+          "default": "http://127.0.0.1:8798"
         }
       ],
       "values": {}
     },
     "required_secrets": [
-      "CORP_ID",
-      "APP_SECRET",
-      "TOKEN",
-      "AESKEY",
-      "OPEN_KFID"
+      "app_secret",
+      "callback_token",
+      "encoding_aes_key"
     ]
   }
 }
