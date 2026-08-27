@@ -1,0 +1,70 @@
+{
+  "id": "sensenova-image-generation-tool",
+  "name": "SenseNova Image Generation Tool",
+  "version": "1.0.0",
+  "type": "tool",
+  "description": "Generate new images from text prompts through the remote SenseNova API.",
+  "author": "qwenpaw-platform",
+  "entry": {
+    "backend": "plugin.py"
+  },
+  "dependencies": [
+    "pillow>=10.0.0"
+  ],
+  "qwenpaw_version": {
+    "min": "2.1.0",
+    "max": "2.2.0"
+  },
+  "meta": {
+    "tools": [
+      {
+        "name": "image_generation",
+        "description": "Generate a brand-new image from a text prompt. Do not use for processing an existing image.",
+        "icon": "🎨",
+        "requires_config": true,
+        "config_fields": [
+          {
+            "name": "api_key",
+            "label": "SenseNova API Key",
+            "type": "password",
+            "required": true,
+            "secret": true
+          },
+          {
+            "name": "base_url",
+            "label": "SenseNova Base URL",
+            "type": "text",
+            "required": false,
+            "placeholder": "https://token.sensenova.cn/v1"
+          },
+          {
+            "name": "model",
+            "label": "SenseNova Image Model",
+            "type": "text",
+            "required": false,
+            "placeholder": "sensenova-u1-fast"
+          },
+          {
+            "name": "timeout",
+            "label": "Timeout seconds",
+            "type": "number",
+            "required": false,
+            "min": 10,
+            "max": 600
+          },
+          {
+            "name": "poll_interval",
+            "label": "Poll interval seconds",
+            "type": "number",
+            "required": false,
+            "min": 1,
+            "max": 60
+          }
+        ]
+      }
+    ],
+    "required_secrets": [
+      "SENSENOVA_API_KEY"
+    ]
+  }
+}

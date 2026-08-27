@@ -97,7 +97,7 @@
 | 微信客服恢复与部署就绪验证 | Custom Gateway/Adapter readiness | `CUSTOM REQUIRED`；未获实现授权 | `plugins/wechat-customer/`、`adapters/wechat_customer/` | 只记录 Secret 名称与 Gateway 状态边界 | open-kfid API、cursor、DB、去重 | 后续仅在授权阶段验证依赖、状态恢复与回滚；当前不开发 | 待授权工程化 |
 | 统一 Response Streaming | Adapter/Core Contract | 待开发 | 未来 response event/Channel renderer 适配层 | stream capability 与 fallback schema | QwenPaw Runtime event boundary、各 Channel 能力 | 无实现；Roadmap Phase 3 | 未来规划 |
 | OCR 独立能力 | Skill，必要时组合 MCP/Provider Adapter | 待开发 | 未来 `skills/ocr/` | Skill 注册 + OCR Provider/语言包配置 | Tesseract 或云 OCR、Poppler、语言模型/版面分析 | 通用 PDF 文档有 OCR 说明，但无独立 Skill、schema 或基准集 | 未来规划 |
-| 独立图片生成 | 未决 Provider/Tool 边界 | `MISSING / CASE E`；新增能力暂停 | 尚无授权目标；不得创建平行 image-generation Skill | 历史 runner/provider 配置缺失，当前 Tool registry 无生成器 | 受支持的 QwenPaw 注册入口、Provider、Secret 注入、存储与内容安全 | Phase 17.4 仅完成历史证据和路由边界测试；未执行真实生成 | 待未来单独授权，不得推定实现形态 |
+| 独立图片生成 | QwenPaw Tool Plugin + Provider Runtime | `OFFLINE READY`；真实租户/API待验收 | `plugins/sensenova-image-generation-tool/`、`core/image_generation/` | QwenPaw Tool config 或 `SENSENOVA_API_KEY`/base URL/model 环境变量 | SenseNova remote API、Pillow、Artifact存储；无本地模型/GPU | Phase 17.5 路由、同步/异步、下载、Artifact、错误及自包含导入测试通过；未执行真实生成 | 已恢复为独立 Tool；不属于 Skill/Hermes |
 | 视频生成 | Skill + MCP/Provider Plugin + Artifact Adapter | 待开发 | 未来 `skills/video-generation/` | 异步 job、Provider、存储、费用/审批配置 | 视频 Provider、对象存储、轮询/回调、转码 | 无实现、无测试 | 未来规划 |
 | MCP 目录标准化 | MCP | 待开发 | 未来 `mcp/<mcp-id>/` | `mcp.yaml` + Runtime 兼容 Driver | 精确 Server 版本、transport、Secret reference | 当前只有 Tavily Driver，无统一测试 | 未来工程化 |
 | Extension 统一测试门禁 | 跨类型测试能力 | 待开发 | `tests/` + 各 Extension `tests/` | CI/Cloud staging 配置 | 固定 Runtime、脱敏 fixture、测试租户 | `tests/README.md` 只有规范，尚无平台测试 harness | 未来规划 |
@@ -113,9 +113,10 @@
 - Customized PDF Editor；
 - Tavily MCP 配置；
 - shell、file、code、image view 等 Runtime Built-in Tools；
-- 企业微信图片生成历史链路。
+- 企业微信图片生成历史链路；
+- Phase 17.5 新增的独立 `image_generation` Tool Plugin 与 SenseNova Provider 离线制品。
 
-其中 Hermes 和外部 Channel/Gateway 已恢复部分源码，但图片生成 runner、Provider 实现和配置未导出。历史运行事实不等于当前 QwenPaw 具有可用的独立生图能力。
+其中 Hermes 和外部 Channel/Gateway 已恢复部分源码，但历史图片生成 runner、Provider 实现和配置未导出。Phase 17.5 的实现依据官方 OpenSenseNova 协议重新建立独立 Tool 边界，并不冒充已找回历史文件；其真实 QwenPaw 租户安装和 API 调用仍待验收。
 
 ### 未来规划
 
@@ -123,7 +124,7 @@
 - 统一 Response Streaming；
 - Telegram、企业微信、微信使用内置 Channel；不再规划重复的生产 Plugin/Adapter；
 - 微信客服独立 Gateway/Adapter 的恢复就绪、状态安全和 staging 验证（需另行授权）；
-- 独立 OCR 和视频生成能力；图片生成保持暂停，需未来单独授权其 Provider/Tool 边界；
+- 独立 OCR 和视频生成能力；图片生成下一步仅进行已授权的租户安装、Secret 注入与真实 API staging 验收；
 - MCP 标准目录与版本锁定；
 - Extension 自动化测试门禁和 Cloud staging 验收。
 

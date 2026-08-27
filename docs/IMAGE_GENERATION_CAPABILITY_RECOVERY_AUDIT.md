@@ -6,6 +6,9 @@
 >
 > Scope: repository/export audit and routing-boundary correction only
 
+> Phase 17.5 update: an independent SenseNova Tool Provider is now implemented
+> and packaged offline; real QwenPaw tenant/API validation remains pending.
+
 ## 1. Definitive conclusion
 
 The historical “生成一张……” capability was not an independently recovered
@@ -143,18 +146,20 @@ The Extension streaming model still supports `tool.start`, `tool.progress`,
 `file.created`, `tool.result`, and error events. Historical Telegram/WeCom code
 also contains real progress/success/failure messages. These are separate
 systems: the local Extension stream has not been proven to be consumed by the
-QwenPaw cloud Runtime, and no current generation producer exists to emit those
-events. The missing producer/integration, not the event vocabulary, is the
-current break.
+QwenPaw cloud Runtime. Phase 17.5 adds a Provider progress callback and final
+Tool status, but the documented QwenPaw `register_tool` API does not expose a
+cloud progress callback, so no streaming claim is made.
 
 ## 8. Recovery boundary
 
-“生成一张……” is **not restored** by this audit. Direct recovery would require
-an authoritative, deployable copy of the historical runner/provider, a supported
-QwenPaw Tool/Plugin registration point, secret injection, content-safety and
-storage rules, and real tenant validation. Reviving Hermes as a production
-Runtime or creating a parallel image-generation Skill is not authorized.
+At the Phase 17.4 baseline, “生成一张……” was not restored. Phase 17.5 found the
+official OpenSenseNova implementation source, implemented a provider-neutral
+Runtime and SenseNova adapter, and added an official QwenPaw
+`PluginApi.register_tool("image_generation")` entry. This restores the local
+registration and execution chain without Hermes. Real tenant installation and
+API validation still require a Secret and staging acceptance.
 
 The offline tests verify the published routing contract for the five required
 prompts and verify that the current exported built-in registry has no generator.
-They do not claim a live QwenPaw cloud routing or generation test.
+They do not claim a live QwenPaw cloud routing or generation test. See
+`docs/IMAGE_GENERATION_RUNTIME.md` and `docs/SENSENOVA_PROVIDER_RECOVERY.md`.

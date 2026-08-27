@@ -14,7 +14,7 @@
 | WeChat Customer / 微信客服 | `CUSTOM` (`CUSTOM REQUIRED`) | Preserve a separate open-kfid Gateway/Adapter boundary if the capability is retained | No BaseChannel or new Plugin is authorized in this phase |
 | Hermes | `ARCHIVED / REFERENCE ONLY` | Never deploy or start as a production Runtime | Preserve selected lifecycle, concurrency, Skill orchestration, memory/context and session modules as reference only |
 | PDF Editor | `CUSTOM` (`CUSTOM SKILL`) | Versioned Skill package uploaded through the supported QwenPaw/AgentScope Skill path | Continue independent Skill lifecycle and regression discipline |
-| Image generation | `MISSING` (`CASE E`) | No current production path; historical Bridge/Gateway depended on an unrecovered external SenseNova runner | Keep recovery evidence; do not revive Hermes or add a parallel Skill without a new decision |
+| Image generation | `CUSTOM TOOL` (`OFFLINE READY`) | QwenPaw `image_generation` Tool Plugin -> provider-neutral Runtime -> remote SenseNova API | No Hermes dependency or parallel processing Skill; real tenant/API validation pending |
 
 `LEGACY` applies to the historical Telegram/WeCom custom assets, not to the
 Telegram or WeCom capabilities themselves. Their production capabilities are
@@ -79,7 +79,7 @@ Hermes recovered platform
 | WeChat Customer deployment | Supported extension entry, sanitized configuration, dependency lock, Gateway recovery, cursor/dedup rollback proof, staging tenant validation |
 | Hermes capability extraction | Reproducible QwenPaw gap, minimal non-Runtime Extension boundary, license/security review, isolated tests |
 | Built-in Channel exception | Reproducible deficiency in the exact QwenPaw version/tenant plus explicit approval to reopen custom Channel work |
-| Image-generation recovery | Authoritative runner/provider source, supported QwenPaw registration point, Secret/storage/content-safety design, and real tenant validation |
+| Image-generation production acceptance | Install/enable Tool Plugin, inject Secret, validate billing/content safety, Artifact rendering, and real Channel response in staging |
 
 ## 6. Source decisions
 
