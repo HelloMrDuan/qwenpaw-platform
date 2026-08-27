@@ -73,7 +73,8 @@ tests/fixtures/pdf-editor/complex/*
 !.env.example
 .venv/
 venv/
-.runtime/
+.runtime/*
+!.runtime/runtime.env.example
 __pycache__/
 *.py[cod]
 node_modules/

@@ -20,8 +20,8 @@ class RembgAdapterTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.models = self.root / "models"
-        self.models.mkdir()
-        (self.models / "u2netp.onnx").write_bytes(b"fixture-model")
+        (self.models / "u2netp").mkdir(parents=True)
+        (self.models / "u2netp" / "u2netp.onnx").write_bytes(b"fixture-model")
         self.source = self.root / "subject.png"
         Image.new("RGB", (8, 6), "red").save(self.source)
 
@@ -58,7 +58,7 @@ class RembgAdapterTests(unittest.TestCase):
         self.assertEqual(payload["model"], "u2netp")
         self.assertTrue(payload["alpha_matting"])
         self.assertEqual(session_calls[0][0], "u2netp")
-        self.assertEqual(Path(session_calls[0][1]["u2net_home"]), self.models)
+        self.assertEqual(Path(session_calls[0][1]["u2net_home"]), self.models / "u2netp")
         self.assertTrue(remove_calls[0]["alpha_matting"])
         with Image.open(output) as rendered:
             self.assertIn("A", rendered.getbands())

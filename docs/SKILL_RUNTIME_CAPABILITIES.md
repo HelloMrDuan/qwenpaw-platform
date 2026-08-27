@@ -40,9 +40,11 @@ the adapter and configured model must also be accessible.
 | CodeFormer | `RUNTIME` | MISSING / BLOCKED | optional face restoration |
 | LaMa | `RUNTIME` | MISSING / BLOCKED | defect/scratch inpainting |
 
-The installation evidence is from Phase 17.0 real cloud validation. Deployment
-must run `scripts/check_runtime_capabilities.py --runtime-test` after placing
-models in the workspace cache.
+The installation evidence is from Phase 17.0 and the wired Skill evidence is
+from Phase 17.2 real cloud validation. Phase 17.3 also discovers existing HF and
+rembg standard caches. Deployment should run
+`scripts/check_runtime_capabilities.py` after restart; the default health check
+loads the ASR model and rembg session before reporting `AVAILABLE`.
 
 ## 3. Dependency policy
 

@@ -24,6 +24,7 @@ class RembgConfig:
     model: str
     model_dir: Path
     allow_download: bool
+    discovery_dirs: tuple[Path, ...] = ()
 
     @classmethod
     def from_env(cls, request: Mapping[str, Any] | None = None) -> "RembgConfig":
@@ -34,14 +35,63 @@ class RembgConfig:
             raise RuntimeUnavailableError(
                 "rembg model must be u2netp, u2net or isnet-general-use; large models are never selected implicitly"
             )
-        return cls(model=model, model_dir=paths.rembg_models, allow_download=model_download_allowed())
+        return cls(
+            model=model,
+            model_dir=paths.rembg_models,
+            allow_download=model_download_allowed(),
+            discovery_dirs=tuple(
+                path
+                for path in (
+                    paths.rembg_models,
+                    paths.configured_rembg_models,
+                    *paths.rembg_caches,
+                )
+                if path is not None
+            ),
+        )
 
     @property
     def model_file(self) -> Path:
-        return self.model_dir / SUPPORTED_MODELS[self.model]
+        return self.model_dir / self.model / SUPPORTED_MODELS[self.model]
+
+    @staticmethod
+    def _model_at(root: Path, model: str) -> Path | None:
+        filename = SUPPORTED_MODELS[model]
+        for candidate in (
+            root / model / filename,
+            root / filename,
+        ):
+            if candidate.is_file():
+                return candidate
+        return None
+
+    def discover_model_file(self) -> Path | None:
+        roots = self.discovery_dirs or (self.model_dir,)
+        seen = set()
+        for root in roots:
+            key = str(root.absolute()).casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            candidate = self._model_at(root, self.model)
+            if candidate is not None:
+                return candidate
+        return None
+
+    def discovered_model_root(self) -> Path | None:
+        model_file = self.discover_model_file()
+        if model_file is None:
+            return None
+        if model_file.parent.name == self.model:
+            return model_file.parent.parent
+        return model_file.parent
+
+    def discovered_model_dir(self) -> Path | None:
+        model_file = self.discover_model_file()
+        return model_file.parent if model_file is not None else None
 
     def model_is_accessible(self) -> bool:
-        return self.model_file.is_file() or self.allow_download
+        return self.discover_model_file() is not None or self.allow_download
 
 
 class RembgAdapter:
@@ -81,10 +131,11 @@ class RembgAdapter:
             )
         self.config.model_dir.mkdir(parents=True, exist_ok=True)
         session_factory, _remove = self._functions()
+        model_dir = self.config.discovered_model_dir() or self.config.model_dir
         try:
             self._session = session_factory(
                 self.config.model,
-                u2net_home=str(self.config.model_dir),
+                u2net_home=str(model_dir),
             )
         except Exception as exc:
             raise RuntimeExecutionError(f"rembg session load failed: {exc}") from exc

@@ -23,6 +23,8 @@ class FasterWhisperConfig:
     device: str
     compute_type: str
     allow_download: bool
+    workspace_cache_dir: Path | None = None
+    discovery_dirs: tuple[Path, ...] = ()
 
     @classmethod
     def from_env(cls, request: Mapping[str, Any] | None = None) -> "FasterWhisperConfig":
@@ -38,7 +40,7 @@ class FasterWhisperConfig:
         return cls(
             model=model,
             model_path=model_path,
-            cache_dir=paths.asr_models,
+            cache_dir=paths.configured_asr_cache or paths.asr_models,
             device=str(request.get("device") or os.environ.get("QWENPAW_ASR_DEVICE") or "auto"),
             compute_type=str(
                 request.get("compute_type")
@@ -46,28 +48,66 @@ class FasterWhisperConfig:
                 or "int8"
             ),
             allow_download=model_download_allowed(),
+            workspace_cache_dir=paths.asr_models,
+            discovery_dirs=tuple(
+                path
+                for path in (
+                    paths.asr_models,
+                    paths.configured_asr_cache,
+                    *paths.huggingface_caches,
+                )
+                if path is not None
+            ),
         )
 
     @property
     def reference(self) -> str:
-        return str(self.model_path) if self.model_path else self.model
+        discovered = self.discover_model()
+        return str(discovered) if discovered else self.model
+
+    @staticmethod
+    def _valid_model_directory(path: Path) -> bool:
+        return path.is_dir() and (path / "model.bin").is_file() and (path / "config.json").is_file()
+
+    def _search_root(self, root: Path) -> Path | None:
+        if self._valid_model_directory(root):
+            return root
+        direct = root / self.model
+        if self._valid_model_directory(direct):
+            return direct
+        repository = root / f"models--Systran--faster-whisper-{self.model}" / "snapshots"
+        if repository.is_dir():
+            for snapshot in sorted(repository.iterdir()):
+                if self._valid_model_directory(snapshot):
+                    return snapshot
+        if root.is_dir():
+            pattern = f"models--Systran--faster-whisper-{self.model}/snapshots/*/model.bin"
+            for model_file in sorted(root.glob(pattern)):
+                if self._valid_model_directory(model_file.parent):
+                    return model_file.parent
+        return None
+
+    def discover_model(self) -> Path | None:
+        if self.model_path is not None:
+            return self.model_path if self._valid_model_directory(self.model_path) else None
+        roots = self.discovery_dirs or tuple(
+            path
+            for path in (self.workspace_cache_dir, self.cache_dir)
+            if path is not None
+        )
+        seen = set()
+        for root in roots:
+            key = str(root.absolute()).casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            discovered = self._search_root(root)
+            if discovered is not None:
+                return discovered
+        return None
 
     def model_is_accessible(self) -> bool:
-        if self.model_path is not None:
-            return self.model_path.is_dir() and any(
-                (self.model_path / name).is_file()
-                for name in ("model.bin", "config.json")
-            )
-        if self.allow_download:
-            return True
-        if not self.cache_dir.is_dir():
-            return False
-        candidates = list(self.cache_dir.rglob("model.bin"))
-        return any(
-            self.model.lower() in str(candidate.parent).lower()
-            or self.model.lower() in str(candidate).lower()
-            for candidate in candidates
-        )
+        return self.discover_model() is not None or self.allow_download
 
 
 class FasterWhisperAdapter:

@@ -82,7 +82,7 @@ class CapabilityResolver:
             return {"status": "RUNTIME_ERROR", "runtime_test": "failed", "error": str(exc)}
         return {"status": "AVAILABLE", "runtime_test": "not_applicable", "error": None}
 
-    def resolve(self, name: str, *, runtime_test: bool = False) -> dict[str, Any]:
+    def resolve(self, name: str, *, runtime_test: bool = True) -> dict[str, Any]:
         spec = CAPABILITY_SPECS.get(name)
         if spec is None:
             return {
@@ -142,8 +142,8 @@ class CapabilityResolver:
         self,
         names: Iterable[str],
         *,
-        runtime_test: bool = False,
+        runtime_test: bool = True,
     ) -> dict[str, dict[str, Any]]:
         if runtime_test:
-            return {name: self.resolve(name, runtime_test=True) for name in names}
-        return {name: self.resolve(name) for name in names}
+            return {name: self.resolve(name) for name in names}
+        return {name: self.resolve(name, runtime_test=False) for name in names}

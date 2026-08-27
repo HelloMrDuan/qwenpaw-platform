@@ -32,14 +32,14 @@ CAPABILITIES = (
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--runtime-test",
+        "--inspect-only",
         action="store_true",
-        help="load ASR models and execute a minimal rembg inference",
+        help="only inspect packages and model paths without loading a model",
     )
     args = parser.parse_args()
     report = CapabilityResolver().resolve_many(
         CAPABILITIES,
-        runtime_test=args.runtime_test,
+        runtime_test=not args.inspect_only,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if all(item["status"] != "RUNTIME_ERROR" for item in report.values()) else 2

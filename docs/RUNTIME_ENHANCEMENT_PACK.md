@@ -7,6 +7,12 @@ Pack. It does not add Skills, vendor model weights into release ZIPs, or modify
 QwenPaw Runtime. Phase 17.1 wires only the two model Runtimes already verified
 in the real cloud environment: `faster-whisper` and `rembg` with `u2netp`.
 
+Phase 17.2 real cloud acceptance subsequently passed for both wired adapters:
+Chinese faster-whisper transcription produced TXT, Markdown, SRT and VTT, and
+rembg passed segment, alpha matting and RGBA Alpha PNG validation. Phase 17.3
+hardens restart persistence so those results no longer depend on temporary
+shell exports or enabling downloads.
+
 ## Real QwenPaw Runtime baseline
 
 The Phase 17.0 cloud acceptance supplied for this repository records:
@@ -49,16 +55,18 @@ an alpha channel. Supported models are `u2netp`, `u2net` and
 | `QWENPAW_RUNTIME_ROOT` | Shared Runtime state root | `<workspace>/.runtime` |
 | `QWENPAW_ASR_MODEL_PATH` | Explicit local faster-whisper model directory | unset |
 | `QWENPAW_ASR_MODEL` | Model name (`tiny`, `base`, `small`) | `tiny` |
-| `QWENPAW_ASR_CACHE_DIR` | ASR model cache | `.runtime/models/asr` |
+| `QWENPAW_ASR_CACHE_DIR` | Additional ASR cache discovery root/download target | unset |
 | `QWENPAW_ASR_DEVICE` | faster-whisper device | `auto` |
 | `QWENPAW_ASR_COMPUTE_TYPE` | CTranslate2 compute type | `int8` |
 | `QWENPAW_REMBG_MODEL` | rembg model | `u2netp` |
-| `QWENPAW_REMBG_MODEL_DIR` | rembg model cache | `.runtime/models/rembg` |
+| `QWENPAW_REMBG_MODEL_DIR` | Additional rembg models root | unset |
 | `QWENPAW_RUNTIME_ALLOW_MODEL_DOWNLOAD` | Explicit opt-in for model downloads | disabled |
 
-The existing cloud model files should be copied or mounted into the workspace
-cache before activation. Model directories are ignored by Git and excluded by
-the Skill package builder.
+Existing cloud models are discovered read-only from workspace caches,
+HuggingFace standard caches and the standard rembg home cache. They do not need
+to be copied or downloaded again. The optional normalization tool can create
+directory symlinks into the workspace layout. Model directories are ignored by
+Git and excluded by the Skill package builder.
 
 ## Failure semantics
 
@@ -69,16 +77,17 @@ the Skill package builder.
 
 ## Health probe
 
-Run metadata/model-access checks:
+Run strict checks, including ASR model load and a minimum rembg inference:
 
 ```bash
 python scripts/check_runtime_capabilities.py
 ```
 
-Run model load and minimum rembg inference checks only in the prepared Runtime:
+Run path/package inspection without loading models:
 
 ```bash
-python scripts/check_runtime_capabilities.py --runtime-test
+python scripts/check_runtime_capabilities.py --inspect-only
 ```
 
-The second command can load model weights but never puts them into a Skill ZIP.
+Strict checks reuse a process-level Adapter instance after successful load and
+never put model weights into a Skill ZIP.

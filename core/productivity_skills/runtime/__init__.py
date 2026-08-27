@@ -13,6 +13,7 @@ _ADAPTER_FACTORIES = {
     "asr": FasterWhisperAdapter.from_request,
     "background_removal": RembgAdapter.from_request,
 }
+_ADAPTER_INSTANCES: dict[tuple[str, object], object] = {}
 
 
 def registered_runtime_capabilities() -> tuple[str, ...]:
@@ -24,7 +25,12 @@ def get_runtime(capability: str, request: Mapping[str, Any] | None = None) -> ob
         factory = _ADAPTER_FACTORIES[capability]
     except KeyError as exc:
         raise RuntimeUnavailableError(f"No Runtime adapter is registered for {capability}") from exc
-    return factory(request)
+    candidate = factory(request)
+    config = getattr(candidate, "config", None)
+    key = (capability, config)
+    if key not in _ADAPTER_INSTANCES:
+        _ADAPTER_INSTANCES[key] = candidate
+    return _ADAPTER_INSTANCES[key]
 
 
 def get_asr_runtime(request: Mapping[str, Any] | None = None) -> FasterWhisperAdapter:

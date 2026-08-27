@@ -50,6 +50,7 @@ class FasterWhisperAdapterTests(unittest.TestCase):
         self.model = self.root / "model"
         self.model.mkdir()
         (self.model / "model.bin").write_bytes(b"fixture-model")
+        (self.model / "config.json").write_text("{}", encoding="utf-8")
         self.media = self.root / "zh.wav"
         with wave.open(str(self.media), "wb") as output:
             output.setnchannels(1)
