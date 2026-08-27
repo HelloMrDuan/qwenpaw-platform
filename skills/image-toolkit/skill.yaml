@@ -2,7 +2,7 @@
   "schema_version": "qwenpaw-productivity-skill.v1",
   "name": "image-toolkit",
   "version": "1.0.0",
-  "description": "Deterministic Pillow-based image inspection, conversion, geometry, metadata, batch and duplicate operations without AI.",
+  "description": "Process at least one existing input image with deterministic Pillow inspection, conversion, geometry, metadata, batch, or duplicate operations. Never use for text-to-image or generating a new image from a prompt.",
   "entrypoint": "scripts/run.py",
   "handler": "image-toolkit",
   "operations": [

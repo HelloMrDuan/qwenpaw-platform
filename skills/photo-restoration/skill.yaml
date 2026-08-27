@@ -2,7 +2,7 @@
   "schema_version": "qwenpaw-productivity-skill.v1",
   "name": "photo-restoration",
   "version": "1.0.0",
-  "description": "Traditional old-photo restoration pipeline with explicit optional AI restoration Runtime stages.",
+  "description": "Restore at least one existing input image of an old or damaged photo using traditional processing and optional AI Runtime stages. Never use for text-to-image or generating a new image from a prompt.",
   "entrypoint": "scripts/run.py",
   "handler": "photo-restoration",
   "operations": [

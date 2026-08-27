@@ -1,6 +1,6 @@
 # image-background-tools
 
-Safe solid-background removal, replacement, blur and subject crop with optional segmentation Runtime.
+Remove, replace, blur, or crop the background of at least one existing input image, with optional segmentation Runtime. Never use for text-to-image or generating a new image from a prompt.
 
 The source launcher uses the repository's canonical productivity runtime. The release builder vendors the required runtime into each standalone ZIP.
 

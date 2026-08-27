@@ -9,12 +9,14 @@ from pathlib import Path
 
 SKILLS = {
     "image-toolkit": {
-        "description": "Deterministic Pillow-based image inspection, conversion, geometry, metadata, batch and duplicate operations without AI.",
+        "description": "Process at least one existing input image with deterministic Pillow inspection, conversion, geometry, metadata, batch, or duplicate operations. Never use for text-to-image or generating a new image from a prompt.",
+        "routing_boundary": "This Skill requires at least one existing input image supplied or referenced by the user. Do not select it for text-to-image requests or requests to generate, draw, or create a new image from a text prompt.",
         "capabilities": {"required": ["pillow"], "optional": ["opencv", "imagemagick"], "runtime": []},
         "operations": ["info", "exif", "hash", "convert", "resize", "crop", "rotate", "flip", "compress", "quality", "dpi", "strip_exif", "alpha", "concat", "split", "to_pdf", "duplicates", "batch_convert", "batch_compress"],
     },
     "photo-restoration": {
-        "description": "Traditional old-photo restoration pipeline with explicit optional AI restoration Runtime stages.",
+        "description": "Restore at least one existing input image of an old or damaged photo using traditional processing and optional AI Runtime stages. Never use for text-to-image or generating a new image from a prompt.",
+        "routing_boundary": "This Skill requires at least one existing input image supplied or referenced by the user. Do not select it for text-to-image requests or requests to generate, draw, or create a new image from a text prompt.",
         "capabilities": {"required": ["pillow"], "optional": ["opencv"], "runtime": ["realesrgan", "gfpgan", "codeformer", "lama", "colorization"]},
         "operations": ["inspect", "pipeline", "comparison", "batch"],
     },
@@ -29,12 +31,14 @@ SKILLS = {
         "operations": ["inspect", "extract_audio", "transcribe", "summarize_transcript", "export_transcript"],
     },
     "image-background-tools": {
-        "description": "Safe solid-background removal, replacement, blur and subject crop with optional segmentation Runtime.",
+        "description": "Remove, replace, blur, or crop the background of at least one existing input image, with optional segmentation Runtime. Never use for text-to-image or generating a new image from a prompt.",
+        "routing_boundary": "This Skill requires at least one existing input image supplied or referenced by the user. Do not select it for text-to-image requests or requests to generate, draw, or create a new image from a text prompt.",
         "capabilities": {"required": ["pillow"], "optional": ["opencv"], "runtime": ["background_removal"]},
         "operations": ["remove_solid", "transparent", "white", "black", "color", "replace", "blur", "crop_subject", "segment", "alpha_matting"],
     },
     "image-quality-enhancer": {
-        "description": "Traditional resize, denoise, sharpen, gamma, contrast and white-balance enhancement with optional AI super-resolution.",
+        "description": "Enhance or upscale at least one existing input image using traditional processing and optional AI super-resolution. Never use for text-to-image or generating a new image from a prompt.",
+        "routing_boundary": "This Skill requires at least one existing input image supplied or referenced by the user. Do not select it for text-to-image requests or requests to generate, draw, or create a new image from a text prompt.",
         "capabilities": {"required": ["pillow"], "optional": ["opencv"], "runtime": ["realesrgan"]},
         "operations": ["enhance", "upscale_2x", "upscale_4x", "denoise", "sharpen", "gamma", "white_balance", "batch"],
     },
@@ -151,6 +155,12 @@ if __name__ == "__main__":
 def _skill_doc(name: str, metadata: dict) -> str:
     operations = "\n".join(f"- `{item}`" for item in metadata["operations"])
     runtime = ", ".join(metadata["capabilities"]["runtime"]) or "none"
+    routing_boundary = metadata.get("routing_boundary")
+    routing_section = (
+        f"\n## Routing boundary\n\n{routing_boundary}\n"
+        if routing_boundary
+        else ""
+    )
     return f'''---
 name: {name}
 description: "{metadata['description']}"
@@ -160,6 +170,7 @@ description: "{metadata['description']}"
 
 Use this Skill only for its incremental capability. Do not replace QwenPaw
 built-in PDF, DOCX, XLSX, PPTX, Browser, Channel, plan or multi-agent Skills.
+{routing_section}
 
 ## Operations
 

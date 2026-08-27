@@ -1,12 +1,18 @@
 ---
 name: image-quality-enhancer
-description: "Traditional resize, denoise, sharpen, gamma, contrast and white-balance enhancement with optional AI super-resolution."
+description: "Enhance or upscale at least one existing input image using traditional processing and optional AI super-resolution. Never use for text-to-image or generating a new image from a prompt."
 ---
 
 # image-quality-enhancer
 
 Use this Skill only for its incremental capability. Do not replace QwenPaw
 built-in PDF, DOCX, XLSX, PPTX, Browser, Channel, plan or multi-agent Skills.
+
+## Routing boundary
+
+This Skill requires at least one existing input image supplied or referenced by
+the user. Do not select it for text-to-image requests or requests to generate,
+draw, or create a new image from a text prompt.
 
 ## Operations
 

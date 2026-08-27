@@ -140,3 +140,17 @@ provides:
 
 The final Hermes strategy is `ARCHIVED / REFERENCE ONLY`. No future production
 role is planned; any reuse requires a new explicit architecture decision.
+
+## 8. Phase 17.4 image-generation clarification
+
+The recovered Hermes source defines an `image_generate` provider abstraction,
+but no matching provider implementation/registration is active in the current
+workspace. More importantly, the recovered production Channel paths did not
+prove a QwenPaw built-in generator: Telegram, WeCom, and WeChat Customer called
+the external `sn_agent_runner.py sn-image-generate` path directly. That runner
+and its SenseNova environment are not present.
+
+Image generation is therefore classified as `CASE E`, not as an active Hermes
+capability to restore. Hermes remains `ARCHIVED / REFERENCE ONLY`; Phase 17.4
+does not authorize starting it, copying its Runtime, or creating a replacement
+image-generation Skill.

@@ -2,7 +2,7 @@
   "schema_version": "qwenpaw-productivity-skill.v1",
   "name": "image-quality-enhancer",
   "version": "1.0.0",
-  "description": "Traditional resize, denoise, sharpen, gamma, contrast and white-balance enhancement with optional AI super-resolution.",
+  "description": "Enhance or upscale at least one existing input image using traditional processing and optional AI super-resolution. Never use for text-to-image or generating a new image from a prompt.",
   "entrypoint": "scripts/run.py",
   "handler": "image-quality-enhancer",
   "operations": [

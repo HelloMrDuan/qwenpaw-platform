@@ -2,7 +2,7 @@
   "schema_version": "qwenpaw-productivity-skill.v1",
   "name": "image-background-tools",
   "version": "1.0.0",
-  "description": "Safe solid-background removal, replacement, blur and subject crop with optional segmentation Runtime.",
+  "description": "Remove, replace, blur, or crop the background of at least one existing input image, with optional segmentation Runtime. Never use for text-to-image or generating a new image from a prompt.",
   "entrypoint": "scripts/run.py",
   "handler": "image-background-tools",
   "operations": [

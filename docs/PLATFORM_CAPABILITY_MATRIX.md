@@ -51,7 +51,7 @@
 | 企业微信机器人 | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置企业微信 Channel | Runtime Console：Bot ID、Secret、扫码授权、媒体目录、群聊上下文 | QwenPaw Runtime、企业微信服务 | 内置能力由真实 Console 确认；历史 Adapter/Plugin 测试仅作参考 | 已有 Runtime 能力 |
 | 企业微信客服 Gateway | Custom Gateway + Adapter | `CUSTOM REQUIRED`；本阶段不开发 | `plugins/wechat-customer/`、`adapters/wechat_customer/` 与历史 Gateway | `open_kfid`、`external_userid`、cursor、Gateway-owned DB | 企业微信客服 API、SQLite、Gateway、QwenPaw | 离线链路测试已存在；源码/配置键审计确认内置微信/企微未证明等价 | 已有历史能力，策略已收敛 |
 | 微信 | Channel（QwenPaw builtin） | `BUILTIN`；生产默认 | QwenPaw v2.1.0 内置微信 Channel | Runtime Console 扫码登录 / Bot Token 配置 | QwenPaw Runtime、微信服务 | 内置入口由真实 Console 确认；需 staging 配置验收 | 已有 Runtime 能力 |
-| 企业微信图片生成链路 | Plugin/Gateway 内嵌能力；目标应拆为 Skill 或 MCP + Adapter | 已运行（云端历史）；待开发（独立 Extension） | 外部 `sn_agent_runner.py` 与 WeCom Gateway；仓库仅有 `digest/procedure/wecom-image-message-pipeline.md` | 外部环境变量与 Gateway 配置，未作为平台 Extension 导出 | 图片生成 Provider、图片压缩、企业微信 media/upload、SQLite、QwenPaw | 历史 runbook 记录压缩、上传、状态机和失败回退验收；无源代码测试 | 已有链路；独立能力属未来规划 |
+| 历史图片生成链路 | Hermes/Bridge/Gateway + 第三方 API | `HISTORICAL ONLY / BROKEN`；`CASE E` | `plugins/hermes/recovered/fast_route.py`、`plugins/wecom/recovered/wecom-node/wecom_bridge.mjs`、`plugins/wechat-customer/recovered/wecom_kf_gateway_v345.py`；外部 `sn_agent_runner.py` 未恢复 | 历史外部 `.env`/SenseNova 配置未导出；当前 QwenPaw Tool registry 无生成器 | 缺失 runner/provider、图片压缩、Channel media upload、Gateway DB | 恢复源码证明历史链路；Phase 17.4 离线路由边界测试；未执行真实生成 | 已有历史能力；当前不可用，不属于 QwenPaw builtin |
 
 ### 4.2 已注册 Skills
 
@@ -97,7 +97,7 @@
 | 微信客服恢复与部署就绪验证 | Custom Gateway/Adapter readiness | `CUSTOM REQUIRED`；未获实现授权 | `plugins/wechat-customer/`、`adapters/wechat_customer/` | 只记录 Secret 名称与 Gateway 状态边界 | open-kfid API、cursor、DB、去重 | 后续仅在授权阶段验证依赖、状态恢复与回滚；当前不开发 | 待授权工程化 |
 | 统一 Response Streaming | Adapter/Core Contract | 待开发 | 未来 response event/Channel renderer 适配层 | stream capability 与 fallback schema | QwenPaw Runtime event boundary、各 Channel 能力 | 无实现；Roadmap Phase 3 | 未来规划 |
 | OCR 独立能力 | Skill，必要时组合 MCP/Provider Adapter | 待开发 | 未来 `skills/ocr/` | Skill 注册 + OCR Provider/语言包配置 | Tesseract 或云 OCR、Poppler、语言模型/版面分析 | 通用 PDF 文档有 OCR 说明，但无独立 Skill、schema 或基准集 | 未来规划 |
-| 独立图片生成 | Skill + MCP 或 Provider Plugin + Artifact Adapter | 待开发 | 未来 `skills/image-generation/`，可配 `mcp/`/`plugins/` | Provider credential reference、模型/尺寸策略 | 图片生成 Provider、存储、内容安全、Channel artifact 支持 | 只有企业微信历史内嵌链路；无独立实现测试 | 未来规划 |
+| 独立图片生成 | 未决 Provider/Tool 边界 | `MISSING / CASE E`；新增能力暂停 | 尚无授权目标；不得创建平行 image-generation Skill | 历史 runner/provider 配置缺失，当前 Tool registry 无生成器 | 受支持的 QwenPaw 注册入口、Provider、Secret 注入、存储与内容安全 | Phase 17.4 仅完成历史证据和路由边界测试；未执行真实生成 | 待未来单独授权，不得推定实现形态 |
 | 视频生成 | Skill + MCP/Provider Plugin + Artifact Adapter | 待开发 | 未来 `skills/video-generation/` | 异步 job、Provider、存储、费用/审批配置 | 视频 Provider、对象存储、轮询/回调、转码 | 无实现、无测试 | 未来规划 |
 | MCP 目录标准化 | MCP | 待开发 | 未来 `mcp/<mcp-id>/` | `mcp.yaml` + Runtime 兼容 Driver | 精确 Server 版本、transport、Secret reference | 当前只有 Tavily Driver，无统一测试 | 未来工程化 |
 | Extension 统一测试门禁 | 跨类型测试能力 | 待开发 | `tests/` + 各 Extension `tests/` | CI/Cloud staging 配置 | 固定 Runtime、脱敏 fixture、测试租户 | `tests/README.md` 只有规范，尚无平台测试 harness | 未来规划 |
@@ -115,7 +115,7 @@
 - shell、file、code、image view 等 Runtime Built-in Tools；
 - 企业微信图片生成历史链路。
 
-其中 Hermes 和外部 Channel/Gateway 属于“能力已有、源码未导出”；恢复源码、版本和测试是工程化工作，不应将其误标为全新业务需求。
+其中 Hermes 和外部 Channel/Gateway 已恢复部分源码，但图片生成 runner、Provider 实现和配置未导出。历史运行事实不等于当前 QwenPaw 具有可用的独立生图能力。
 
 ### 未来规划
 
@@ -123,7 +123,7 @@
 - 统一 Response Streaming；
 - Telegram、企业微信、微信使用内置 Channel；不再规划重复的生产 Plugin/Adapter；
 - 微信客服独立 Gateway/Adapter 的恢复就绪、状态安全和 staging 验证（需另行授权）；
-- 独立 OCR、图片生成和视频生成能力；
+- 独立 OCR 和视频生成能力；图片生成保持暂停，需未来单独授权其 Provider/Tool 边界；
 - MCP 标准目录与版本锁定；
 - Extension 自动化测试门禁和 Cloud staging 验收。
 

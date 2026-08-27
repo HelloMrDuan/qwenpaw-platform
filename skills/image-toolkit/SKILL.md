@@ -1,12 +1,18 @@
 ---
 name: image-toolkit
-description: "Deterministic Pillow-based image inspection, conversion, geometry, metadata, batch and duplicate operations without AI."
+description: "Process at least one existing input image with deterministic Pillow inspection, conversion, geometry, metadata, batch, or duplicate operations. Never use for text-to-image or generating a new image from a prompt."
 ---
 
 # image-toolkit
 
 Use this Skill only for its incremental capability. Do not replace QwenPaw
 built-in PDF, DOCX, XLSX, PPTX, Browser, Channel, plan or multi-agent Skills.
+
+## Routing boundary
+
+This Skill requires at least one existing input image supplied or referenced by
+the user. Do not select it for text-to-image requests or requests to generate,
+draw, or create a new image from a text prompt.
 
 ## Operations
 
