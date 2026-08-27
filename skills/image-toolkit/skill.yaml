@@ -11,6 +11,7 @@
     "hash",
     "convert",
     "resize",
+    "fit",
     "crop",
     "rotate",
     "flip",

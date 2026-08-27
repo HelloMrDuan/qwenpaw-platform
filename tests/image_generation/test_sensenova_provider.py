@@ -35,8 +35,8 @@ class SenseNovaProviderTests(unittest.TestCase):
                 ImageGenerationRequest(
                     prompt="industrial control room",
                     negative_prompt="blurry",
-                    width=2048,
-                    height=2048,
+                    aspect_ratio="1:1",
+                    image_size="2k",
                     seed=42,
                 ),
                 output_dir=Path(tmp),

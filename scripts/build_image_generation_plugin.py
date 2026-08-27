@@ -9,7 +9,7 @@ import zipfile
 
 
 PLUGIN_ID = "sensenova-image-generation-tool"
-PLUGIN_VERSION = "1.0.0"
+PLUGIN_VERSION = "1.0.1"
 FIXED_TIMESTAMP = (2026, 1, 1, 0, 0, 0)
 
 
@@ -23,6 +23,11 @@ def _sources(repository_root: Path) -> list[tuple[Path, str]]:
         relative = source.relative_to(repository_root).as_posix()
         files.append((source, relative))
     for source in sorted((repository_root / "core" / "contracts").glob("*.py")):
+        relative = source.relative_to(repository_root).as_posix()
+        files.append((source, relative))
+    for source in sorted(
+        (repository_root / "core" / "productivity_skills").rglob("*.py")
+    ):
         relative = source.relative_to(repository_root).as_posix()
         files.append((source, relative))
     missing = [str(source) for source, _ in files if not source.is_file()]

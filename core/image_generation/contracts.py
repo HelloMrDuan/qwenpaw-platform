@@ -9,6 +9,13 @@ from typing import Any, Mapping
 
 from core.contracts.artifact import Artifact
 
+from .sizing import (
+    DEFAULT_IMAGE_SIZE,
+    infer_aspect_ratio,
+    infer_requested_size,
+    resolve_size_plan,
+)
+
 
 class GenerationStatus(str, Enum):
     SUBMITTED = "SUBMITTED"
@@ -23,8 +30,11 @@ class GenerationStatus(str, Enum):
 class ImageGenerationRequest:
     prompt: str
     negative_prompt: str = ""
-    width: int = 2048
-    height: int = 2048
+    aspect_ratio: str | None = None
+    image_size: str = DEFAULT_IMAGE_SIZE
+    requested_size: str | None = None
+    fit_mode: str = "cover"
+    require_native_size: bool = False
     seed: int | None = None
     model: str | None = None
     count: int = 1
@@ -34,9 +44,20 @@ class ImageGenerationRequest:
             raise ValueError("prompt must be non-empty text")
         if not isinstance(self.negative_prompt, str):
             raise TypeError("negative_prompt must be text")
-        for name, value in (("width", self.width), ("height", self.height)):
-            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-                raise ValueError(f"{name} must be a positive integer")
+        resolved_ratio = infer_aspect_ratio(self.prompt, self.aspect_ratio)
+        resolved_requested_size = infer_requested_size(
+            self.prompt,
+            self.requested_size,
+        )
+        object.__setattr__(self, "aspect_ratio", resolved_ratio)
+        object.__setattr__(self, "requested_size", resolved_requested_size)
+        resolve_size_plan(
+            image_size=self.image_size,
+            aspect_ratio=resolved_ratio,
+            requested_size=resolved_requested_size,
+            fit_mode=self.fit_mode,
+            require_native_size=self.require_native_size,
+        )
         if not isinstance(self.count, int) or isinstance(self.count, bool):
             raise TypeError("count must be an integer")
         if not 1 <= self.count <= 8:
@@ -50,6 +71,16 @@ class ImageGenerationRequest:
         ):
             raise ValueError("model must be non-empty text or null")
 
+    @property
+    def size_plan(self):
+        return resolve_size_plan(
+            image_size=self.image_size,
+            aspect_ratio=self.aspect_ratio,
+            requested_size=self.requested_size,
+            fit_mode=self.fit_mode,
+            require_native_size=self.require_native_size,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class GeneratedImage:
@@ -60,6 +91,12 @@ class GeneratedImage:
     height: int
     seed: int | None = None
     source_url: str | None = None
+    requested_size: str | None = None
+    requested_aspect_ratio: str = ""
+    image_size: str = ""
+    provider_size: str = ""
+    provider_aspect_ratio: str = ""
+    final_size: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", Path(self.path))
@@ -76,6 +113,12 @@ class GeneratedImage:
             "width": self.width,
             "height": self.height,
             "seed": self.seed,
+            "requested_size": self.requested_size,
+            "requested_aspect_ratio": self.requested_aspect_ratio,
+            "image_size": self.image_size,
+            "provider_size": self.provider_size,
+            "provider_aspect_ratio": self.provider_aspect_ratio,
+            "final_size": self.final_size,
         }
 
 
@@ -99,6 +142,13 @@ class ImageGenerationResponse:
     error: str | None = None
     error_code: str | None = None
     task_id: str | None = None
+    requested_size: str | None = None
+    requested_aspect_ratio: str = ""
+    image_size: str = ""
+    provider_size: str = ""
+    provider_aspect_ratio: str = ""
+    final_size: str = ""
+    retryable: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.status, str):
@@ -111,17 +161,27 @@ class ImageGenerationResponse:
             raise ValueError("duration cannot be negative")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "status": self.status.value,
             "images": [image.to_dict() for image in self.images],
             "provider": self.provider,
             "model": self.model,
             "seed": self.seed,
             "duration": self.duration,
-            "error": self.error,
-            "error_code": self.error_code,
             "task_id": self.task_id,
+            "requested_size": self.requested_size,
+            "requested_aspect_ratio": self.requested_aspect_ratio,
+            "image_size": self.image_size,
+            "provider_size": self.provider_size,
+            "provider_aspect_ratio": self.provider_aspect_ratio,
+            "final_size": self.final_size,
+            "retryable": self.retryable,
         }
+        if self.error is not None:
+            result["error"] = self.error
+        if self.error_code is not None:
+            result["error_code"] = self.error_code
+        return result
 
 
 @dataclass(frozen=True, slots=True)

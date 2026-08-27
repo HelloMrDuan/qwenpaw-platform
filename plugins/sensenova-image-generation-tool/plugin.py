@@ -35,6 +35,11 @@ class SenseNovaImageGenerationToolPlugin:
             description=tool.TOOL_DESCRIPTION,
             icon="🎨",
             enabled=False,
+            tool_type="network",
+        )
+        api.register_middleware(
+            tool.image_generation_middleware_factory,
+            priority=40,
         )
 
 

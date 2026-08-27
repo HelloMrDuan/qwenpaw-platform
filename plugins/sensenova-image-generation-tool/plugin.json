@@ -1,7 +1,7 @@
 {
   "id": "sensenova-image-generation-tool",
   "name": "SenseNova Image Generation Tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "tool",
   "description": "Generate new images from text prompts through the remote SenseNova API.",
   "author": "qwenpaw-platform",
@@ -59,6 +59,38 @@
             "required": false,
             "min": 1,
             "max": 60
+          },
+          {
+            "name": "default_aspect_ratio",
+            "label": "Default aspect ratio",
+            "type": "select",
+            "required": false,
+            "default": "16:9",
+            "options": ["2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "1:1", "16:9", "9:16", "9:21"]
+          },
+          {
+            "name": "landscape_aspect_ratio",
+            "label": "Landscape aspect ratio",
+            "type": "select",
+            "required": false,
+            "default": "16:9",
+            "options": ["3:2", "4:3", "5:4", "16:9"]
+          },
+          {
+            "name": "portrait_aspect_ratio",
+            "label": "Portrait aspect ratio",
+            "type": "select",
+            "required": false,
+            "default": "9:16",
+            "options": ["2:3", "3:4", "4:5", "9:16", "9:21"]
+          },
+          {
+            "name": "default_fit_mode",
+            "label": "Exact-size fit mode",
+            "type": "select",
+            "required": false,
+            "default": "cover",
+            "options": ["cover", "contain", "stretch"]
           }
         ]
       }

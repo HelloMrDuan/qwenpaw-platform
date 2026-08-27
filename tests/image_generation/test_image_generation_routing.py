@@ -20,9 +20,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 class FakePluginApi:
     def __init__(self) -> None:
         self.calls = []
+        self.middleware_calls = []
 
     def register_tool(self, **kwargs) -> None:
         self.calls.append(kwargs)
+
+    def register_middleware(self, factory, *, priority=100) -> None:
+        self.middleware_calls.append((factory, priority))
 
 
 class ImageGenerationRoutingTests(unittest.TestCase):
@@ -58,6 +62,9 @@ class ImageGenerationRoutingTests(unittest.TestCase):
         self.assertFalse(call["enabled"])
         self.assertIn("brand-new image", call["description"])
         self.assertIn("existing image", call["description"])
+        self.assertEqual(call["tool_type"], "network")
+        self.assertEqual(len(api.middleware_calls), 1)
+        self.assertEqual(api.middleware_calls[0][1], 40)
 
     def test_release_plugin_loads_without_repository_imports(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -68,12 +75,17 @@ class ImageGenerationRoutingTests(unittest.TestCase):
                 bundle.extractall(extracted)
             forbidden_root = json.dumps(str(REPOSITORY_ROOT.resolve()))
             script = (
-                "import importlib.util,json,pathlib,sys;"
+                "import importlib.util,json,pathlib,sys,types;"
                 "root=pathlib.Path.cwd();"
                 "spec=importlib.util.spec_from_file_location('isolated_plugin',root/'plugin.py');"
                 "mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod);"
+                "calls=[];middlewares=[];"
+                "api=types.SimpleNamespace(register_tool=lambda **kw:calls.append(kw),"
+                "register_middleware=lambda factory,priority=100:middlewares.append(priority));"
+                "mod.plugin.register(api);"
                 "print(json.dumps({'plugin':type(mod.plugin).__name__,'repo_on_path':"
-                f"any(pathlib.Path(p).resolve()==pathlib.Path({forbidden_root}) for p in sys.path)}}))"
+                f"any(pathlib.Path(p).resolve()==pathlib.Path({forbidden_root}) for p in sys.path),"
+                "'tool':calls[0]['tool_name'],'middleware_priority':middlewares[0]}))"
             )
             environment = {
                 "PATH": os.environ.get("PATH", ""),
@@ -92,6 +104,8 @@ class ImageGenerationRoutingTests(unittest.TestCase):
             result = json.loads(completed.stdout)
             self.assertEqual(result["plugin"], "SenseNovaImageGenerationToolPlugin")
             self.assertFalse(result["repo_on_path"])
+            self.assertEqual(result["tool"], "image_generation")
+            self.assertEqual(result["middleware_priority"], 40)
 
 
 if __name__ == "__main__":

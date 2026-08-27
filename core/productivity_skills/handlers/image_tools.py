@@ -144,6 +144,44 @@ def _image_toolkit(request: dict[str, Any]) -> dict[str, Any]:
             if height <= 0:
                 height = max(1, round(image.height * width / image.width))
             output, item = _save(image.resize((width, height), Image.Resampling.LANCZOS), request, source, operation)
+        elif operation == "fit":
+            width = int(request.get("width") or 0)
+            height = int(request.get("height") or 0)
+            if width <= 0 or height <= 0:
+                return invalid("fit requires positive width and height")
+            fit_mode = str(request.get("fit_mode") or "cover").lower()
+            if fit_mode not in {"contain", "cover", "stretch"}:
+                return invalid("fit_mode must be contain, cover or stretch")
+            working = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+            if fit_mode == "cover":
+                changed = ImageOps.fit(
+                    working,
+                    (width, height),
+                    method=Image.Resampling.LANCZOS,
+                    centering=(0.5, 0.5),
+                )
+            elif fit_mode == "contain":
+                contained = ImageOps.contain(
+                    working,
+                    (width, height),
+                    method=Image.Resampling.LANCZOS,
+                )
+                background = request.get("background")
+                if background is None:
+                    background = (0, 0, 0, 0) if working.mode == "RGBA" else "white"
+                changed = Image.new(working.mode, (width, height), background)
+                offset = ((width - contained.width) // 2, (height - contained.height) // 2)
+                changed.paste(
+                    contained,
+                    offset,
+                    contained if contained.mode == "RGBA" else None,
+                )
+            else:
+                changed = working.resize(
+                    (width, height),
+                    Image.Resampling.LANCZOS,
+                )
+            output, item = _save(changed, request, source, f"fit-{fit_mode}")
         elif operation == "crop":
             box = request.get("box")
             if not isinstance(box, list) or len(box) != 4:

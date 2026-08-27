@@ -21,6 +21,7 @@ draw, or create a new image from a text prompt.
 - `hash`
 - `convert`
 - `resize`
+- `fit` (`cover`, `contain`, or explicit `stretch`)
 - `crop`
 - `rotate`
 - `flip`

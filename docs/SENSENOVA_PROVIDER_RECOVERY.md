@@ -1,6 +1,6 @@
 # SenseNova Provider Recovery
 
-> Phase: 17.5
+> Phase: 17.6.1
 >
 > Historical export result: `sn_agent_runner.py = NOT_FOUND`
 
@@ -64,6 +64,18 @@ The official upstream `SensenovaText2ImageClient` confirms:
 - errors: explicit missing-key, HTTP/auth, empty response, download, and image
   decode failures.
 
+The current upstream backend accepts `image_size` buckets `1K` and `2K` and
+ten ratios: `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `1:1`, `16:9`, `9:16`,
+and `9:21`. Although the generic runner exposes a `4k` option and mentions
+`21:9`, the SenseNova backend at audited commit
+`98a8bde28092fb8f33664154a0edeb4d9cdb352f` rejects 4K and ratios wider than
+16:9; they are not advertised by this Tool.
+
+The v1.0.1 adapter therefore translates ratio plus preset to the official exact
+pixel bucket internally. Arbitrary pixel strings are no longer sent directly
+to SenseNova. Non-native exact final sizes are handled after generation by
+image-toolkit and retain full requested/provider/final provenance.
+
 The historical runner exposed polling arguments, but the recovered upstream
 SenseNova U1 client currently returns synchronous image data. The new adapter
 also accepts an asynchronous `task_id` response with bounded polling for
@@ -93,11 +105,14 @@ Optional bounded-operation variables are `SENSENOVA_TIMEOUT`,
 
 The Provider contract, SenseNova adapter, QwenPaw Tool Plugin registration,
 download validation, Artifact conversion, error semantics, polling, and
-self-contained release import are verified offline with mocked transport.
+self-contained release import, terminal ToolChunk/DataBlock result, exact-size
+post-processing, and request/tool-call idempotency are verified offline with
+mocked transport.
 
-No SenseNova credential is present on the current machine. The real prompt
-`a futuristic industrial control room, cinematic lighting` was therefore not
-submitted, and the real test result is `PROVIDER_NOT_CONFIGURED`. This is not a
-generation success claim. Real tenant installation, Tool enablement, API billing,
-content-safety response, and Channel rendering still require controlled staging
-acceptance.
+No SenseNova credential is present on the current machine, so this offline fix
+did not submit a paid prompt. The existing cloud deployment has generated a
+real image according to the supplied Phase 17.6.1 acceptance feedback; that
+evidence exposed the unsupported-size and repeated-call defects. It does not
+validate the new v1.0.1 package. v1.0.1 tenant installation, Tool-call count,
+exact-size output, final UI rendering, and Agent stop behavior still require
+controlled staging acceptance.

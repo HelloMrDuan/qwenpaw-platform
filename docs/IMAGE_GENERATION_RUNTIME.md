@@ -1,8 +1,8 @@
 # Image Generation Runtime
 
-> Phase: 17.5
+> Phase: 17.6.1
 >
-> Status: offline implementation complete; real QwenPaw tenant and SenseNova API validation pending
+> Status: size/idempotency fix validated offline; v1.0.1 cloud installation and UI validation pending
 
 ## 1. Runtime boundary
 
@@ -28,8 +28,9 @@ local image model.
 
 `core/image_generation/` defines:
 
-- `ImageGenerationRequest`: prompt, negative prompt, width, height, seed,
-  model override, and count;
+- `ImageGenerationRequest`: prompt, negative prompt, constrained
+  `aspect_ratio`, `image_size`, optional exact `requested_size`, fit policy,
+  seed, model override, and count;
 - `ImageGenerationResponse`: status, images, provider, model, seed, duration,
   error, error code, and optional task ID;
 - `ImageGenerationProvider.generate(...)`: replaceable provider boundary;
@@ -66,15 +67,22 @@ api.register_tool(
     description=...,
     icon="🎨",
     enabled=False,
+    tool_type="network",
 )
 ```
+
+The Plugin also registers an official `on_acting` middleware. It captures the
+QwenPaw `tool_call.id` and latest user message ID into request-local
+`ContextVar`s; it does not patch QwenPaw core. These stable IDs scope the
+checksum-verified idempotency record.
 
 The Tool is disabled by default until configuration is injected. The manifest
 declares per-agent Tool configuration fields. The Runtime wrapper also accepts
 the environment variables below, so no Secret is checked into Git.
 
-The self-contained release ZIP bundles `core/image_generation` and the existing
-Artifact contracts. Source-tree imports are not required after installation.
+The self-contained release ZIP bundles `core/image_generation`, Artifact
+contracts, and the existing image-toolkit runtime. Source-tree imports are not
+required after installation.
 
 ## 5. Routing boundary
 
@@ -106,9 +114,26 @@ atomically saves PNG/JPEG, and the Service creates one Artifact per image with:
 - provider, model, and seed provenance.
 
 The QwenPaw wrapper converts successful image paths to `DataBlock` objects with
-`file://` sources, matching the official Tool Plugin pattern.
+`file://` sources, matching the official Tool Plugin pattern. A final
+`TextBlock` carries `status=completed`, `success=true`, `retryable=false`, size
+provenance, and Artifact descriptors. No prior error or retry instruction is
+included in a successful result.
 
-## 7. Progress boundary
+## 7. Exact-size and idempotency boundary
+
+The Agent only selects official ratios and `1k`/`2k` presets. Provider pixel
+buckets are internal. An exact final request such as `1920x1080` is generated
+using the native `2752x1536` 2K 16:9 bucket, then fitted by image-toolkit with a
+configurable `cover` (default), `contain`, or explicit `stretch` policy. The
+Artifact records requested, provider, and final sizes separately.
+
+Completed results are cached only when the Artifact still exists and its
+SHA-256 matches. The same tool call or same user turn plus request fingerprint
+returns that Artifact without another SenseNova request. Retryable transport,
+429, 5xx, and timeout failures are not cached; deterministic failures are
+terminal.
+
+## 8. Progress boundary
 
 The Service records `SUBMITTED`, `RUNNING`, and `SUCCESS` progress messages.
 The current official `PluginApi.register_tool` contract does not expose a
@@ -116,7 +141,7 @@ documented progress callback, so the Plugin returns a final explicit status and
 does not claim cloud streaming. A future QwenPaw-supported progress API can map
 the existing provider callback without changing provider logic.
 
-## 8. Security and operations
+## 9. Security and operations
 
 - TLS verification remains enabled in the standard transport.
 - Authentication uses a Bearer header and is never logged or returned.
@@ -126,4 +151,4 @@ the existing provider callback without changing provider logic.
 - No `.env`, credential, generated file, cache, or local model is packaged.
 
 Official QwenPaw Plugin reference:
-[QwenPaw Plugin System](https://github.com/agentscope-ai/QwenPaw/blob/main/website/public/docs/plugins.en.md).
+[QwenPaw v2.1.0 Plugin System](https://github.com/agentscope-ai/QwenPaw/blob/v2.1.0/website/public/docs/plugins.en.md).

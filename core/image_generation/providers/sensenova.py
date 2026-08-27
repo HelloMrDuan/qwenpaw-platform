@@ -184,6 +184,7 @@ class SenseNovaImageProvider(ImageGenerationProvider):
     def generate(self, request, *, output_dir, progress=None):
         started = self._clock()
         model = request.model or self.config.model
+        size_plan = request.size_plan
         if not self.config.api_key:
             return self._failure(
                 GenerationStatus.PROVIDER_NOT_CONFIGURED,
@@ -217,6 +218,7 @@ class SenseNovaImageProvider(ImageGenerationProvider):
                         "SenseNova image generation timed out",
                         "TIMEOUT",
                         task_id=task_id,
+                        retryable=True,
                     )
                 if self._state(data) == "FAILED":
                     return self._failure(
@@ -246,6 +248,7 @@ class SenseNovaImageProvider(ImageGenerationProvider):
                     output_dir=Path(output_dir),
                     seed=source.get("seed", request.seed),
                     index=index,
+                    size_plan=size_plan,
                 )
                 for index, source in enumerate(sources[: request.count])
             )
@@ -262,6 +265,11 @@ class SenseNovaImageProvider(ImageGenerationProvider):
                 started,
                 str(exc),
                 code,
+                retryable=(
+                    exc.status_code is None
+                    or exc.status_code == 429
+                    or bool(exc.status_code and exc.status_code >= 500)
+                ),
             )
         except (OSError, ValueError, TypeError) as exc:
             return self._failure(
@@ -281,6 +289,15 @@ class SenseNovaImageProvider(ImageGenerationProvider):
             seed=request.seed,
             duration=round(self._clock() - started, 3),
             task_id=task_id,
+            requested_size=size_plan.requested_size,
+            requested_aspect_ratio=size_plan.requested_aspect_ratio,
+            image_size=size_plan.image_size,
+            provider_size=(
+                images[0].provider_size if images else size_plan.provider_size
+            ),
+            provider_aspect_ratio=size_plan.provider_aspect_ratio,
+            final_size=images[0].final_size if images else size_plan.final_size,
+            retryable=False,
         )
 
     def _submit_url(self) -> str:
@@ -300,10 +317,11 @@ class SenseNovaImageProvider(ImageGenerationProvider):
 
     @staticmethod
     def _payload(request: ImageGenerationRequest, model: str) -> dict[str, Any]:
+        size_plan = request.size_plan
         payload: dict[str, Any] = {
             "model": model,
             "prompt": request.prompt,
-            "size": f"{request.width}x{request.height}",
+            "size": size_plan.provider_size,
             "n": request.count,
             "response_format": "url",
             "output_format": "png",
@@ -348,7 +366,7 @@ class SenseNovaImageProvider(ImageGenerationProvider):
             self._sleep(self.config.poll_interval)
         return None
 
-    def _materialize(self, source, *, output_dir, seed, index):
+    def _materialize(self, source, *, output_dir, seed, index, size_plan):
         if source.get("url"):
             data, declared_mime = self._retry(
                 lambda: self.transport.get_bytes(
@@ -396,6 +414,12 @@ class SenseNovaImageProvider(ImageGenerationProvider):
             height=height,
             seed=seed if isinstance(seed, int) else None,
             source_url=source_url,
+            requested_size=size_plan.requested_size,
+            requested_aspect_ratio=size_plan.requested_aspect_ratio,
+            image_size=size_plan.image_size,
+            provider_size=f"{width}x{height}",
+            provider_aspect_ratio=size_plan.provider_aspect_ratio,
+            final_size=f"{width}x{height}",
         )
 
     @staticmethod
@@ -473,7 +497,9 @@ class SenseNovaImageProvider(ImageGenerationProvider):
         error_code,
         *,
         task_id=None,
+        retryable=False,
     ):
+        size_plan = request.size_plan
         return ImageGenerationResponse(
             status=status,
             provider=self.name,
@@ -483,4 +509,11 @@ class SenseNovaImageProvider(ImageGenerationProvider):
             error=error,
             error_code=error_code,
             task_id=task_id,
+            requested_size=size_plan.requested_size,
+            requested_aspect_ratio=size_plan.requested_aspect_ratio,
+            image_size=size_plan.image_size,
+            provider_size=size_plan.provider_size,
+            provider_aspect_ratio=size_plan.provider_aspect_ratio,
+            final_size=size_plan.final_size,
+            retryable=retryable,
         )
