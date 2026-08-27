@@ -175,7 +175,7 @@ python scripts/run.py --request '{{"operation":"{metadata['operations'][0]}"}}'
 
 Every response is JSON and uses one of `SUCCESS`, `PARTIAL_SUCCESS`,
 `DEPENDENCY_MISSING`, `MODEL_RUNTIME_REQUIRED`, `UNSUPPORTED`, `INVALID_INPUT`
-or `FAILED`. A file-producing success includes Artifact metadata. Source files
+or `RUNTIME_ERROR`/`FAILED`. A file-producing success includes Artifact metadata. Source files
 are never overwritten. Optional model Runtime capabilities: {runtime}.
 
 Never claim an unavailable dependency/model operation succeeded. Never put
@@ -208,7 +208,7 @@ def generate(repository_root: Path, *, force: bool = False) -> None:
             "handler": name,
             "operations": metadata["operations"],
             "capabilities": metadata["capabilities"],
-            "statuses": ["SUCCESS", "PARTIAL_SUCCESS", "DEPENDENCY_MISSING", "MODEL_RUNTIME_REQUIRED", "UNSUPPORTED", "INVALID_INPUT", "FAILED"],
+            "statuses": ["SUCCESS", "PARTIAL_SUCCESS", "DEPENDENCY_MISSING", "MODEL_RUNTIME_REQUIRED", "RUNTIME_ERROR", "UNSUPPORTED", "INVALID_INPUT", "FAILED"],
             "artifact_contract": {"required_metadata": ["operation", "source", "output", "mime_type", "size", "checksum"], "overwrite_source": False},
         }
         (root / "skill.yaml").write_text(json.dumps(descriptor, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

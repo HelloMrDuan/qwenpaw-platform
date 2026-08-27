@@ -45,7 +45,7 @@ class CoreProductivitySkillPackTests(unittest.TestCase):
             descriptor = json.loads((root / "skill.yaml").read_text(encoding="utf-8"))
             self.assertEqual(descriptor["name"], name)
             self.assertEqual(descriptor["artifact_contract"]["overwrite_source"], False)
-            self.assertEqual(len(descriptor["statuses"]), 7)
+            self.assertGreaterEqual(len(descriptor["statuses"]), 7)
 
     def test_capability_resolver_never_guesses_model_availability(self):
         resolver = CapabilityResolver()

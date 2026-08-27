@@ -10,6 +10,11 @@ from typing import Any, Mapping
 from ..artifacts import artifact, safe_output_path
 from ..capabilities import CapabilityResolver
 from ..models import SkillStatus, invalid, result
+from ..runtime import (
+    RuntimeExecutionError,
+    RuntimeUnavailableError,
+    get_segmentation_runtime,
+)
 
 
 def _pillow():
@@ -275,7 +280,62 @@ def _background(request: dict[str, Any]) -> dict[str, Any]:
     capabilities = resolver.resolve_many(("pillow", "opencv", "background_removal"))
     try:
         if operation in {"segment", "alpha_matting"}:
-            return result(SkillStatus.MODEL_RUNTIME_REQUIRED, "Complex segmentation requires rembg or another segmentation Runtime", error_code="MODEL_RUNTIME_REQUIRED", capabilities=capabilities)
+            if not capabilities["background_removal"]["available"]:
+                return result(
+                    SkillStatus.MODEL_RUNTIME_REQUIRED,
+                    "Complex segmentation requires rembg and an accessible local model",
+                    error_code="MODEL_RUNTIME_REQUIRED",
+                    capabilities=capabilities,
+                )
+            output = safe_output_path(
+                request,
+                source=source,
+                stem_suffix="background-removed",
+                extension=".png",
+            )
+            try:
+                payload = dict(
+                    get_segmentation_runtime(request).segment(
+                        source,
+                        output,
+                        alpha_matting=operation == "alpha_matting",
+                    )
+                )
+            except RuntimeUnavailableError as exc:
+                return result(
+                    SkillStatus.MODEL_RUNTIME_REQUIRED,
+                    "The rembg Runtime or configured model is unavailable",
+                    error_code="MODEL_RUNTIME_REQUIRED",
+                    error_detail=str(exc),
+                    capabilities=capabilities,
+                )
+            except RuntimeExecutionError as exc:
+                return result(
+                    SkillStatus.RUNTIME_ERROR,
+                    "The rembg Runtime failed",
+                    error_code="RUNTIME_ERROR",
+                    error_detail=str(exc),
+                    capabilities=capabilities,
+                )
+            item = artifact(
+                output,
+                operation=operation,
+                source=source,
+                extra={
+                    "width": payload.get("width"),
+                    "height": payload.get("height"),
+                    "engine": payload.get("engine", "rembg"),
+                    "model": payload.get("model"),
+                    "alpha_matting": payload.get("alpha_matting", operation == "alpha_matting"),
+                },
+            )
+            return result(
+                SkillStatus.SUCCESS,
+                "Background segmentation completed",
+                data={"output": output.name, **payload},
+                artifacts=[item],
+                capabilities=capabilities,
+            )
         rgba = image.convert("RGBA")
         if operation in {"remove_solid", "transparent", "segment", "alpha_matting"}:
             pixels = list(rgba.get_flattened_data() if hasattr(rgba, "get_flattened_data") else rgba.getdata())

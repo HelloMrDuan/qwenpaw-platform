@@ -31,7 +31,7 @@ python scripts/run.py --request '{"operation":"remove_solid"}'
 
 Every response is JSON and uses one of `SUCCESS`, `PARTIAL_SUCCESS`,
 `DEPENDENCY_MISSING`, `MODEL_RUNTIME_REQUIRED`, `UNSUPPORTED`, `INVALID_INPUT`
-or `FAILED`. A file-producing success includes Artifact metadata. Source files
+or `RUNTIME_ERROR`/`FAILED`. A file-producing success includes Artifact metadata. Source files
 are never overwritten. Optional model Runtime capabilities: background_removal.
 
 Never claim an unavailable dependency/model operation succeeded. Never put

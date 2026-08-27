@@ -12,6 +12,11 @@ from typing import Any
 from ..artifacts import artifact, safe_output_path, write_report
 from ..capabilities import CapabilityResolver
 from ..models import SkillStatus, invalid, result
+from ..runtime import (
+    RuntimeExecutionError,
+    RuntimeUnavailableError,
+    get_asr_runtime,
+)
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
@@ -276,18 +281,57 @@ def _media_transcriber(request: dict[str, Any]) -> dict[str, Any]:
             return result(SkillStatus.FAILED, "Audio extraction failed", error_code="FFMPEG_FAILED", error_detail=completed.stderr[-1000:], capabilities=capabilities)
         item = artifact(output, operation=operation, source=source, extra={"duration": duration, "format": "wav"})
         return result(SkillStatus.SUCCESS, "Audio extraction completed", artifacts=[item], capabilities=capabilities)
-    if not capabilities["asr"]["available"] or not request.get("model_path"):
+    if not capabilities["asr"]["available"]:
         return result(
             SkillStatus.MODEL_RUNTIME_REQUIRED,
-            "Transcription requires a configured Whisper/FunASR Runtime and local model_path",
+            "Transcription requires faster-whisper and an accessible local model",
             data={"duration": duration, "format": media_format},
             error_code="MODEL_RUNTIME_REQUIRED",
             capabilities=capabilities,
         )
+    try:
+        payload = dict(
+            get_asr_runtime(request).transcribe(
+                source,
+                language=str(request.get("language") or "").strip() or None,
+                diarization=bool(request.get("diarization")),
+            )
+        )
+    except RuntimeUnavailableError as exc:
+        return result(
+            SkillStatus.MODEL_RUNTIME_REQUIRED,
+            "The faster-whisper Runtime or configured model is unavailable",
+            data={"duration": duration, "format": media_format},
+            error_code="MODEL_RUNTIME_REQUIRED",
+            error_detail=str(exc),
+            capabilities=capabilities,
+        )
+    except RuntimeExecutionError as exc:
+        return result(
+            SkillStatus.RUNTIME_ERROR,
+            "The faster-whisper Runtime failed",
+            data={"duration": duration, "format": media_format},
+            error_code="RUNTIME_ERROR",
+            error_detail=str(exc),
+            capabilities=capabilities,
+        )
+    segments = payload.get("segments")
+    transcript = str(payload.get("text") or "").strip()
+    if not isinstance(segments, list):
+        return result(
+            SkillStatus.RUNTIME_ERROR,
+            "The faster-whisper Runtime returned invalid segments",
+            error_code="RUNTIME_ERROR",
+            capabilities=capabilities,
+        )
+    outputs = _write_transcript_outputs(request, transcript, segments)
+    payload.setdefault("duration", duration)
+    payload["media_format"] = media_format
     return result(
-        SkillStatus.UNSUPPORTED,
-        "The detected ASR Runtime must be connected through a deployment-specific adapter",
-        error_code="ASR_ADAPTER_REQUIRED",
+        SkillStatus.SUCCESS,
+        "Media transcription completed",
+        data=payload,
+        artifacts=outputs,
         capabilities=capabilities,
     )
 

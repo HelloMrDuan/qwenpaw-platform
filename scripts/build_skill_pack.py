@@ -114,6 +114,9 @@ def build_skill(repository_root: Path, output_root: Path, name: str) -> SkillPac
             "runtime/handlers/__init__.py": runtime_root / "handlers" / "__init__.py",
             f"runtime/handlers/{handler}.py": runtime_root / "handlers" / f"{handler}.py",
         }
+        for source in sorted((runtime_root / "runtime").rglob("*.py")):
+            relative = source.relative_to(runtime_root / "runtime").as_posix()
+            runtime_files[f"runtime/runtime/{relative}"] = source
         for target, source in runtime_files.items():
             _write(package, target, source.read_bytes()); entries += 1
     with zipfile.ZipFile(archive) as package:

@@ -7,40 +7,42 @@ Skill asks it for a named capability and receives:
 
 ```json
 {
-  "name": "realesrgan",
-  "available": false,
-  "mode": "runtime_required"
+  "name": "asr",
+  "available": true,
+  "status": "AVAILABLE",
+  "mode": "runtime",
+  "version": "installed package version",
+  "python_package": "faster-whisper",
+  "runtime_test": "model_accessible",
+  "error": null
 }
 ```
 
-Modes are `native`, `runtime`, `dependency_missing`, `runtime_required` and
-`unsupported`. Handlers do not infer availability from a filename, prompt or
-requested operation.
+Statuses are `AVAILABLE`, `DEGRADED`, `MISSING` and `RUNTIME_ERROR`. Compatible
+modes remain `native`, `runtime`, `dependency_missing`, `runtime_required` and
+`unsupported`. For model capabilities, import success alone is insufficient:
+the adapter and configured model must also be accessible.
 
-## 2. Current local environment audit
+## 2. Real QwenPaw Runtime audit and Phase 17.1 wiring
 
 | Capability | Class | Current state | Used by |
 | --- | --- | --- | --- |
 | Pillow | `REQUIRED` for image Skills | AVAILABLE | Image toolkit/restoration/background/quality |
-| OpenCV | `OPTIONAL` | NOT INSTALLED | scratch/defect and advanced native image paths |
-| ImageMagick | `OPTIONAL` | NOT INSTALLED | optional conversions |
-| ffmpeg/ffprobe | `OPTIONAL` | AVAILABLE | media inspection/extraction |
-| Tesseract binary | `OPTIONAL` | NOT INSTALLED | OCR fallback (`pytesseract` wrapper alone is insufficient) |
-| PaddleOCR | `RUNTIME` | NOT INSTALLED in project venv | Chinese/mixed OCR and layout/table adapter |
-| openpyxl | `OPTIONAL` | AVAILABLE | OCR XLSX output, XLSX profiling/report |
-| PyArrow | `OPTIONAL` | NOT INSTALLED | Parquet profiling |
-| PyYAML | `OPTIONAL` | NOT INSTALLED | YAML/Compose/Kubernetes config parsing |
-| 7z | `OPTIONAL` | NOT INSTALLED | 7z archive support |
-| Whisper/FunASR | `RUNTIME` | NOT INSTALLED | ASR |
-| Real-ESRGAN | `RUNTIME` | NOT INSTALLED | AI super-resolution |
-| GFPGAN | `RUNTIME` | NOT INSTALLED | face restoration |
-| CodeFormer | `RUNTIME` | NOT INSTALLED | face restoration |
-| LaMa | `RUNTIME` | NOT INSTALLED | defect/scratch inpainting |
-| Colorization Runtime | `RUNTIME` | NOT INSTALLED | black-and-white colorization |
-| rembg/segmentation | `RUNTIME` | NOT INSTALLED | complex background removal/matting |
+| OpenCV | `OPTIONAL` | AVAILABLE in real cloud | traditional image paths |
+| ffmpeg/ffprobe | `OPTIONAL` | AVAILABLE in real cloud | media inspection/extraction |
+| Tesseract 5.3.0 + `chi_sim` + `eng` | `OPTIONAL` | AVAILABLE in real cloud | OCR text/bbox/confidence |
+| PaddleOCR | `RUNTIME` | MISSING / BLOCKED | layout/table adapter remains deferred |
+| openpyxl | `OPTIONAL` | AVAILABLE in real cloud | OCR XLSX output, XLSX profiling/report |
+| faster-whisper | `RUNTIME` | INSTALLED + ADAPTER WIRED | ASR and subtitles |
+| rembg + u2netp | `RUNTIME` | INSTALLED + ADAPTER WIRED | segment and alpha matting |
+| Real-ESRGAN | `RUNTIME` | MISSING / BLOCKED | AI super-resolution |
+| GFPGAN | `RUNTIME` | MISSING / BLOCKED | face restoration |
+| CodeFormer | `RUNTIME` | MISSING / BLOCKED | optional face restoration |
+| LaMa | `RUNTIME` | MISSING / BLOCKED | defect/scratch inpainting |
 
-The audit is specific to the project venv and system commands observed during
-Phase 15. Deployment must re-run capability discovery.
+The installation evidence is from Phase 17.0 real cloud validation. Deployment
+must run `scripts/check_runtime_capabilities.py --runtime-test` after placing
+models in the workspace cache.
 
 ## 3. Dependency policy
 
@@ -63,5 +65,6 @@ vendoring them into every Skill.
 3. If a traditional stage completed but requested AI stages did not, return
    `PARTIAL_SUCCESS` with `MODEL_RUNTIME_REQUIRED` details and the valid native
    Artifact.
-4. Never download weights implicitly.
+4. Never download weights implicitly; an operator must opt in with
+   `QWENPAW_RUNTIME_ALLOW_MODEL_DOWNLOAD=1`.
 5. Never turn resize/sharpen/contrast into a claim of AI restoration.
