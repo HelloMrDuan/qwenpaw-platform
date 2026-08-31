@@ -1,7 +1,7 @@
 {
   "id": "sensenova-image-generation-tool",
   "name": "SenseNova Image Generation Tool",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "tool",
   "description": "Generate new images from text prompts through the remote SenseNova API.",
   "author": "qwenpaw-platform",

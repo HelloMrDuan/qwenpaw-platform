@@ -98,6 +98,20 @@ and the
 Offline tests verify one provider call for a normal successful request, no
 second provider call for a completed duplicate, final 1920x1080 pixels, image
 DataBlock construction, clean terminal success, and retry semantics. QwenPaw
-cloud v1.0.1 upload, actual Chat UI rendering, final Agent stop behavior, and
+cloud v1.0.2 upload, actual Chat UI rendering, final Agent stop behavior, and
 cloud Tool-call count remain `NOT EXECUTED / TO VERIFY`; local return values do
 not prove those UI outcomes.
+
+## QwenPaw v2.1.0 Schema compatibility hotfix
+
+Version 1.0.1 postponed annotations through `from __future__ import
+annotations`. Consequently, `inspect.signature(image_generation)` exposed
+`AspectRatio`, `ImageSize`, and `FitMode` as strings. QwenPaw v2.1.0 uses those
+raw annotations to create a Pydantic v2 dynamic model outside the plugin module
+namespace, leaving `AspectRatio` as an unresolved forward reference.
+
+Version 1.0.2 removes postponed annotations from the public Tool module and
+inlines the official `Literal` values in the callable signature. The resulting
+signature contains concrete typing objects, so `create_model`, JSON Schema
+generation, and `model_rebuild(force=True)` complete without a custom types
+namespace. No QwenPaw core change is required.

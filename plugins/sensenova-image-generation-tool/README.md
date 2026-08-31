@@ -30,6 +30,10 @@ a terminal `ToolChunk(SUCCESS)` JSON summary. Tool-call and user-turn IDs feed
 a checksum-verified idempotency cache, preventing repeated paid calls for the
 same request while allowing retryable failures to run again.
 
+Version 1.0.2 exposes only concrete runtime annotations in the registered Tool
+signature. This keeps QwenPaw v2.1.0's signature-driven Pydantic v2 dynamic
+model fully defined without plugin-specific namespaces or QwenPaw core patches.
+
 The checked-in source Plugin uses `core/image_generation`. A release package
 must bundle that package, `core/contracts`, and the image-toolkit runtime so
 installation does not depend on the qwenpaw-platform repository root.

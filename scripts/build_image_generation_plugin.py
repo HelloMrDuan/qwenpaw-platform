@@ -9,7 +9,7 @@ import zipfile
 
 
 PLUGIN_ID = "sensenova-image-generation-tool"
-PLUGIN_VERSION = "1.0.1"
+PLUGIN_VERSION = "1.0.2"
 FIXED_TIMESTAMP = (2026, 1, 1, 0, 0, 0)
 
 

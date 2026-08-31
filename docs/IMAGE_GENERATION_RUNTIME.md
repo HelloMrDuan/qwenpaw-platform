@@ -2,7 +2,7 @@
 
 > Phase: 17.6.1
 >
-> Status: size/idempotency fix validated offline; v1.0.1 cloud installation and UI validation pending
+> Status: v1.0.2 Pydantic dynamic-Schema hotfix validated offline; cloud installation and UI validation pending
 
 ## 1. Runtime boundary
 

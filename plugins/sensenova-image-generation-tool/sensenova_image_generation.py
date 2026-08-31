@@ -1,6 +1,9 @@
-"""QwenPaw-facing wrapper around the provider-neutral generation service."""
+"""QwenPaw-facing wrapper around the provider-neutral generation service.
 
-from __future__ import annotations
+The public tool signature intentionally contains concrete runtime annotations.
+QwenPaw v2.1.0 builds a Pydantic model directly from ``inspect.signature``;
+postponed/string annotations would therefore become unresolved forward refs.
+"""
 
 import asyncio
 from contextvars import ContextVar
@@ -63,10 +66,22 @@ def _output_dir() -> Path:
 async def image_generation(
     prompt: str,
     negative_prompt: str = "",
-    aspect_ratio: AspectRatio | None = None,
-    image_size: ImageSize = "2k",
+    aspect_ratio: Literal[
+        "2:3",
+        "3:2",
+        "3:4",
+        "4:3",
+        "4:5",
+        "5:4",
+        "1:1",
+        "16:9",
+        "9:16",
+        "9:21",
+    ]
+    | None = None,
+    image_size: Literal["1k", "2k"] = "2k",
     requested_size: str | None = None,
-    fit_mode: FitMode | None = None,
+    fit_mode: Literal["cover", "contain", "stretch"] | None = None,
     require_native_size: bool = False,
     seed: int | None = None,
     model: str | None = None,

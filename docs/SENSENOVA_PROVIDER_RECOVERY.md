@@ -113,6 +113,6 @@ No SenseNova credential is present on the current machine, so this offline fix
 did not submit a paid prompt. The existing cloud deployment has generated a
 real image according to the supplied Phase 17.6.1 acceptance feedback; that
 evidence exposed the unsupported-size and repeated-call defects. It does not
-validate the new v1.0.1 package. v1.0.1 tenant installation, Tool-call count,
+validate the v1.0.2 Schema-hotfix package. v1.0.2 tenant installation, Tool-call count,
 exact-size output, final UI rendering, and Agent stop behavior still require
 controlled staging acceptance.
