@@ -131,7 +131,9 @@ Completed results are cached only when the Artifact still exists and its
 SHA-256 matches. The same tool call or same user turn plus request fingerprint
 returns that Artifact without another SenseNova request. Retryable transport,
 429, 5xx, and timeout failures are not cached; deterministic failures are
-terminal.
+terminal. Invalid ratios, presets, or strict-native exact sizes return
+`INVALID_IMAGE_SIZE` with the complete supported preset and ratio lists before
+any Provider call.
 
 ## 8. Progress boundary
 

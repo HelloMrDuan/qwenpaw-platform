@@ -46,7 +46,8 @@ options. It does not accept arbitrary `width` and `height` provider buckets.
 - exact non-native final size: choose the same or nearest supported ratio,
   generate one native bucket, then use image-toolkit;
 - `require_native_size=true`: reject a non-native exact size before any remote
-  call, with a non-retryable deterministic error.
+  call, with non-retryable `INVALID_IMAGE_SIZE` plus
+  `supported_image_sizes` and `supported_aspect_ratios`.
 
 The default `cover` policy preserves aspect ratio and center-crops. `contain`
 preserves the full image with padding. `stretch` exists only as an explicit

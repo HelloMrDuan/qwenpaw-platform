@@ -120,6 +120,13 @@ async def image_generation(
             "tool_call_id": metadata.get("tool_call_id"),
             "request_id": metadata.get("request_id"),
         }
+        if result.get("error_code") == "INVALID_IMAGE_SIZE":
+            terminal["supported_image_sizes"] = result.get(
+                "supported_image_sizes", []
+            )
+            terminal["supported_aspect_ratios"] = result.get(
+                "supported_aspect_ratios", []
+            )
         return ToolChunk(
             state=ToolResultState.ERROR,
             content=[

@@ -77,8 +77,10 @@ class ImageGenerationSizingTests(unittest.TestCase):
                 config=SenseNovaConfig(api_key="test"),
                 transport=transport,
             )
-        self.assertEqual(result["error_code"], "UNSUPPORTED_NATIVE_SIZE")
+        self.assertEqual(result["error_code"], "INVALID_IMAGE_SIZE")
         self.assertFalse(result["retryable"])
+        self.assertEqual(result["supported_image_sizes"], ["1k", "2k"])
+        self.assertIn("16:9", result["supported_aspect_ratios"])
         self.assertEqual(transport.post_calls, [])
 
     def test_24_square_maps_to_2048_bucket(self) -> None:

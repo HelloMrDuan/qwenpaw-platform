@@ -15,6 +15,8 @@ from .sizing import (
     DEFAULT_IMAGE_SIZE,
     DEFAULT_LANDSCAPE_ASPECT_RATIO,
     DEFAULT_PORTRAIT_ASPECT_RATIO,
+    SUPPORTED_ASPECT_RATIOS,
+    SUPPORTED_IMAGE_SIZES,
     UnsupportedNativeSizeError,
     infer_aspect_ratio,
     infer_requested_size,
@@ -74,6 +76,17 @@ def invoke_image_generation_tool(
             count=count,
         )
     except (TypeError, ValueError, UnsupportedNativeSizeError) as exc:
+        detail = str(exc)
+        size_error = isinstance(exc, UnsupportedNativeSizeError) or any(
+            field in detail
+            for field in (
+                "image_size",
+                "aspect_ratio",
+                "requested_size",
+                "native SenseNova size",
+                "fit_mode",
+            )
+        )
         return {
             "status": "FAILED",
             "images": [],
@@ -86,11 +99,15 @@ def invoke_image_generation_tool(
                 "idempotency_hit": False,
             },
             "retryable": False,
-            "error": str(exc),
-            "error_code": (
-                "UNSUPPORTED_NATIVE_SIZE"
-                if isinstance(exc, UnsupportedNativeSizeError)
-                else "INVALID_ARGUMENT"
+            "error": detail,
+            "error_code": "INVALID_IMAGE_SIZE" if size_error else "INVALID_ARGUMENT",
+            **(
+                {
+                    "supported_image_sizes": list(SUPPORTED_IMAGE_SIZES),
+                    "supported_aspect_ratios": list(SUPPORTED_ASPECT_RATIOS),
+                }
+                if size_error
+                else {}
             ),
         }
 
